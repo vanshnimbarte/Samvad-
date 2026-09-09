@@ -1,6 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AppHeader } from '@/components/app-header';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
@@ -8,7 +9,10 @@ import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 export default function ReportScreen() {
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+        {/* Top Header */}
+        <AppHeader subtitle="Citizen Reporting" />
+
         <View style={styles.content}>
           <ThemedText type="title">Report</ThemedText>
           <ThemedText themeColor="textSecondary">Report screen</ThemedText>
