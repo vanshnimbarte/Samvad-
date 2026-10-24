@@ -1,0 +1,178 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Samvad — Industry Partner Data
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface IndustryPartner {
+  id: string;
+  companyName: string;
+  shortName: string;
+  type: 'CSR' | 'MSME' | 'Startup' | 'Research Lab' | 'Innovation Hub';
+  sector: string;
+  city: string;
+  state: string;
+  description: string;
+  contributionTypes: ('Funding' | 'Mentoring' | 'Prototyping' | 'Pilot Testing' | 'Tech Transfer')[];
+  totalFundingCommitted: string;
+  activeProjects: number;
+  completedProjects: number;
+  domains: string[];
+  logoEmoji: string;
+  accentColor: string;
+  contactEmail: string;
+  impactHighlight: string;
+}
+
+export const INDUSTRY_PARTNERS_DATA: IndustryPartner[] = [
+  {
+    id: 'TATA-CSR',
+    companyName: 'Tata Steel Foundation',
+    shortName: 'Tata Steel',
+    type: 'CSR',
+    sector: 'Steel & Mining',
+    city: 'Jamshedpur',
+    state: 'Jharkhand',
+    description: 'Tata Steel Foundation drives community development across Jharkhand with a focus on water, health, education, and livelihoods. CSR budget channelled through the platform for co-funded innovation projects.',
+    contributionTypes: ['Funding', 'Prototyping', 'Pilot Testing'],
+    totalFundingCommitted: '₹1.2 Crore',
+    activeProjects: 4,
+    completedProjects: 3,
+    domains: ['Water & Sanitation', 'Healthcare', 'Rural Livelihoods'],
+    logoEmoji: '🏭',
+    accentColor: '#1e40af',
+    contactEmail: 'csr@tata.com',
+    impactHighlight: '12,000 beneficiaries across 3 completed projects',
+  },
+  {
+    id: 'WIPRO-FDN',
+    companyName: 'Wipro Foundation',
+    shortName: 'Wipro',
+    type: 'CSR',
+    sector: 'Information Technology',
+    city: 'Bengaluru',
+    state: 'Karnataka',
+    description: 'Wipro Foundation supports digital inclusion, healthcare technology, and education innovation in tribal geographies across eastern India.',
+    contributionTypes: ['Funding', 'Tech Transfer', 'Mentoring'],
+    totalFundingCommitted: '₹85 Lakhs',
+    activeProjects: 2,
+    completedProjects: 2,
+    domains: ['Healthcare', 'Education', 'Public Services'],
+    logoEmoji: '💡',
+    accentColor: '#0891b2',
+    contactEmail: 'foundation@wipro.com',
+    impactHighlight: 'Telemedicine reach to 45,000 tribal citizens',
+  },
+  {
+    id: 'ITC-AGRI',
+    companyName: 'ITC Limited — Agribusiness Division',
+    shortName: 'ITC Agri',
+    type: 'CSR',
+    sector: 'FMCG & Agriculture',
+    city: 'Kolkata',
+    state: 'West Bengal',
+    description: 'ITC e-Choupal and Agribusiness CSR wing focuses on farmer livelihood enhancement, soil health, and sustainable agri-value chains.',
+    contributionTypes: ['Mentoring', 'Pilot Testing', 'Funding'],
+    totalFundingCommitted: '₹40 Lakhs',
+    activeProjects: 2,
+    completedProjects: 1,
+    domains: ['Agriculture & Farming', 'Rural Livelihoods'],
+    logoEmoji: '🌾',
+    accentColor: '#16a34a',
+    contactEmail: 'agri.csr@itc.in',
+    impactHighlight: '1,200 farmers enrolled in soil health programme',
+  },
+  {
+    id: 'SELCO',
+    companyName: 'SELCO Foundation',
+    shortName: 'SELCO',
+    type: 'Innovation Hub',
+    sector: 'Clean Energy',
+    city: 'Bengaluru',
+    state: 'Karnataka',
+    description: 'SELCO Foundation designs and deploys clean energy solutions for underserved communities, with a proven model for community-managed solar micro-grids.',
+    contributionTypes: ['Funding', 'Tech Transfer', 'Pilot Testing'],
+    totalFundingCommitted: '₹28 Lakhs',
+    activeProjects: 1,
+    completedProjects: 2,
+    domains: ['Electricity & Energy', 'Rural Livelihoods'],
+    logoEmoji: '☀️',
+    accentColor: '#f59e0b',
+    contactEmail: 'info@selcofoundation.org',
+    impactHighlight: '340 households electrified across 6 hamlets',
+  },
+  {
+    id: 'GOOGLE-EDU',
+    companyName: 'Google.org',
+    shortName: 'Google.org',
+    type: 'Innovation Hub',
+    sector: 'Technology',
+    city: 'Gurugram',
+    state: 'Haryana',
+    description: 'Google.org provides funding and technology expertise to nonprofits and social enterprises working on education, economic opportunity, and crisis response.',
+    contributionTypes: ['Funding', 'Tech Transfer'],
+    totalFundingCommitted: '₹50 Lakhs',
+    activeProjects: 1,
+    completedProjects: 0,
+    domains: ['Education', 'Rural Livelihoods'],
+    logoEmoji: '🌐',
+    accentColor: '#4285f4',
+    contactEmail: 'india@google.org',
+    impactHighlight: '8,000 students gaining digital literacy',
+  },
+  {
+    id: 'RAMKY-ENV',
+    companyName: 'Ramky Enviro Engineers',
+    shortName: 'Ramky',
+    type: 'MSME',
+    sector: 'Waste Management',
+    city: 'Hyderabad',
+    state: 'Telangana',
+    description: 'Ramky Enviro Engineers specialise in municipal solid waste management, biogas plants, and material recovery facilities across Indian cities.',
+    contributionTypes: ['Prototyping', 'Pilot Testing', 'Tech Transfer'],
+    totalFundingCommitted: '₹15 Lakhs (in-kind)',
+    activeProjects: 1,
+    completedProjects: 1,
+    domains: ['Urban Infrastructure', 'Environment'],
+    logoEmoji: '♻️',
+    accentColor: '#059669',
+    contactEmail: 'bd@ramky.com',
+    impactHighlight: 'Biogas pilot processing 5 TPD in Deoghar',
+  },
+  {
+    id: 'AMAZON-SMB',
+    companyName: 'Amazon Karigar (Amazon India)',
+    shortName: 'Amazon Karigar',
+    type: 'Innovation Hub',
+    sector: 'E-commerce',
+    city: 'Bengaluru',
+    state: 'Karnataka',
+    description: 'Amazon Karigar programme connects Indian artisans with global customers, providing technology, logistics, and marketing support to craft-based livelihoods.',
+    contributionTypes: ['Tech Transfer', 'Mentoring'],
+    totalFundingCommitted: '₹5 Lakhs (in-kind)',
+    activeProjects: 1,
+    completedProjects: 0,
+    domains: ['Rural Livelihoods'],
+    logoEmoji: '🛒',
+    accentColor: '#f59e0b',
+    contactEmail: 'karigar@amazon.in',
+    impactHighlight: '600 artisans onboarded for online selling',
+  },
+  {
+    id: 'CSC-GOV',
+    companyName: 'CSC e-Governance Services India Ltd.',
+    shortName: 'CSC SPV',
+    type: 'Innovation Hub',
+    sector: 'e-Governance',
+    city: 'New Delhi',
+    state: 'Delhi',
+    description: 'CSC SPV operates 5+ lakh Common Service Centres across India and provides technology and infrastructure for last-mile government service delivery.',
+    contributionTypes: ['Tech Transfer', 'Mentoring'],
+    totalFundingCommitted: '₹8 Lakhs (in-kind)',
+    activeProjects: 1,
+    completedProjects: 1,
+    domains: ['Public Services', 'Education'],
+    logoEmoji: '🏛️',
+    accentColor: '#7c3aed',
+    contactEmail: 'partnership@csc.gov.in',
+    impactHighlight: 'Digital service delivery to 1,400+ villages',
+  },
+];

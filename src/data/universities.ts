@@ -1,0 +1,191 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Samvad — University (HEI) Data
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface University {
+  id: string;
+  name: string;
+  shortName: string;
+  type: 'Central University' | 'State University' | 'IIT' | 'NIT' | 'Deemed' | 'Private' | 'Agricultural';
+  city: string;
+  district: string;
+  established: number;
+  disciplines: string[];
+  researchCentres: string[];
+  incubationFacility: boolean;
+  activeProjects: number;
+  completedProjects: number;
+  assignedChallenges: number;
+  ipGenerated: number;
+  startupsIncubated: number;
+  facultyCount: number;
+  studentResearchers: number;
+  domains: string[];
+  contactEmail: string;
+  logoEmoji: string;
+  accentColor: string;
+}
+
+export const UNIVERSITIES_DATA: University[] = [
+  {
+    id: 'IIT-ISM',
+    name: 'IIT (ISM) Dhanbad',
+    shortName: 'IIT ISM',
+    type: 'IIT',
+    city: 'Dhanbad',
+    district: 'Dhanbad',
+    established: 1926,
+    disciplines: ['Mining Engineering', 'Petroleum Engineering', 'Electrical Engineering', 'Computer Science', 'Renewable Energy', 'Environmental Engineering'],
+    researchCentres: ['Centre for Clean Energy', 'Mining & Geology Research Lab', 'AI & Data Science Centre'],
+    incubationFacility: true,
+    activeProjects: 12,
+    completedProjects: 8,
+    assignedChallenges: 14,
+    ipGenerated: 7,
+    startupsIncubated: 5,
+    facultyCount: 340,
+    studentResearchers: 280,
+    domains: ['Electricity & Energy', 'Environment', 'Rural Livelihoods'],
+    contactEmail: 'innovation@iitism.ac.in',
+    logoEmoji: '🔬',
+    accentColor: '#1e40af',
+  },
+  {
+    id: 'NIT-JKD',
+    name: 'NIT Jamshedpur',
+    shortName: 'NIT Jamshedpur',
+    type: 'NIT',
+    city: 'Jamshedpur',
+    district: 'East Singhbhum',
+    established: 1960,
+    disciplines: ['Computer Science', 'Electronics', 'Mechanical Engineering', 'Civil Engineering', 'HCI', 'Education Technology'],
+    researchCentres: ['Centre for Digital Innovation', 'IoT & Embedded Systems Lab', 'Smart Infrastructure Research Centre'],
+    incubationFacility: true,
+    activeProjects: 9,
+    completedProjects: 6,
+    assignedChallenges: 11,
+    ipGenerated: 4,
+    startupsIncubated: 3,
+    facultyCount: 220,
+    studentResearchers: 195,
+    domains: ['Education', 'Urban Infrastructure', 'Public Services'],
+    contactEmail: 'research@nitjsr.ac.in',
+    logoEmoji: '💻',
+    accentColor: '#0891b2',
+  },
+  {
+    id: 'BIT-MESRA',
+    name: 'Birsa Institute of Technology, Mesra',
+    shortName: 'BIT Mesra',
+    type: 'Deemed',
+    city: 'Mesra',
+    district: 'Ranchi',
+    established: 1955,
+    disciplines: ['Environmental Engineering', 'Chemistry', 'Public Health', 'Civil Engineering', 'Biotechnology'],
+    researchCentres: ['Environmental Research Lab', 'Water Technology Centre', 'Biotech Incubation Hub'],
+    incubationFacility: true,
+    activeProjects: 7,
+    completedProjects: 11,
+    assignedChallenges: 9,
+    ipGenerated: 5,
+    startupsIncubated: 4,
+    facultyCount: 290,
+    studentResearchers: 220,
+    domains: ['Water & Sanitation', 'Healthcare', 'Environment'],
+    contactEmail: 'rd@bitmesra.ac.in',
+    logoEmoji: '🧪',
+    accentColor: '#059669',
+  },
+  {
+    id: 'XAVIER',
+    name: 'Xavier Institute of Social Service',
+    shortName: 'XISS Ranchi',
+    type: 'Private',
+    city: 'Ranchi',
+    district: 'Ranchi',
+    established: 1955,
+    disciplines: ['Public Health', 'Social Work', 'Information Technology', 'Rural Management', 'Human Rights'],
+    researchCentres: ['Tribal Studies Centre', 'Community Health Research Lab', 'Development Studies Institute'],
+    incubationFacility: false,
+    activeProjects: 5,
+    completedProjects: 9,
+    assignedChallenges: 7,
+    ipGenerated: 1,
+    startupsIncubated: 0,
+    facultyCount: 85,
+    studentResearchers: 120,
+    domains: ['Healthcare', 'Rural Livelihoods', 'Public Services'],
+    contactEmail: 'research@xiss.ac.in',
+    logoEmoji: '🏥',
+    accentColor: '#dc2626',
+  },
+  {
+    id: 'BASU',
+    name: 'Birsa Agricultural University',
+    shortName: 'BAU Ranchi',
+    type: 'Agricultural',
+    city: 'Ranchi',
+    district: 'Ranchi',
+    established: 1981,
+    disciplines: ['Soil Science', 'Agronomy', 'Extension Education', 'Horticulture', 'Animal Husbandry', 'Fisheries'],
+    researchCentres: ['Soil Health Management Centre', 'Dryland Agriculture Research Station', 'Tribal Farming Systems Lab'],
+    incubationFacility: false,
+    activeProjects: 8,
+    completedProjects: 14,
+    assignedChallenges: 10,
+    ipGenerated: 3,
+    startupsIncubated: 2,
+    facultyCount: 180,
+    studentResearchers: 160,
+    domains: ['Agriculture & Farming', 'Rural Livelihoods', 'Environment'],
+    contactEmail: 'vc@bauranchi.ac.in',
+    logoEmoji: '🌾',
+    accentColor: '#16a34a',
+  },
+  {
+    id: 'RANCHI-UNIV',
+    name: 'Ranchi University',
+    shortName: 'Ranchi Univ.',
+    type: 'State University',
+    city: 'Ranchi',
+    district: 'Ranchi',
+    established: 1960,
+    disciplines: ['Environmental Science', 'Public Administration', 'Computer Science', 'Chemistry', 'Law', 'Economics'],
+    researchCentres: ['Centre for Jharkhand Studies', 'Environmental Monitoring Lab', 'Digital Governance Research Cell'],
+    incubationFacility: false,
+    activeProjects: 6,
+    completedProjects: 7,
+    assignedChallenges: 8,
+    ipGenerated: 2,
+    startupsIncubated: 1,
+    facultyCount: 420,
+    studentResearchers: 180,
+    domains: ['Public Services', 'Urban Infrastructure', 'Environment'],
+    contactEmail: 'vc@ranchiuniversity.ac.in',
+    logoEmoji: '🏛️',
+    accentColor: '#7c3aed',
+  },
+  {
+    id: 'XLRI',
+    name: 'XLRI — Xavier School of Management',
+    shortName: 'XLRI',
+    type: 'Deemed',
+    city: 'Jamshedpur',
+    district: 'East Singhbhum',
+    established: 1949,
+    disciplines: ['Rural Management', 'Marketing', 'HCI', 'Social Entrepreneurship', 'HR Management'],
+    researchCentres: ['Centre for Business & Society', 'Livelihood Research Lab', 'Social Innovation Hub'],
+    incubationFacility: true,
+    activeProjects: 4,
+    completedProjects: 5,
+    assignedChallenges: 6,
+    ipGenerated: 1,
+    startupsIncubated: 6,
+    facultyCount: 110,
+    studentResearchers: 95,
+    domains: ['Rural Livelihoods', 'Public Services', 'Education'],
+    contactEmail: 'research@xlri.ac.in',
+    logoEmoji: '📊',
+    accentColor: '#c2410c',
+  },
+];

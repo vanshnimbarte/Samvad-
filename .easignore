@@ -1,0 +1,6 @@
+# Antigravity / agent customization dirs — contain symlinks that break EAS archiving on Windows
+.agents/
+
+# Common development dirs not needed for builds
+.git/
+node_modules/

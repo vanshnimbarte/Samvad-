@@ -29,7 +29,7 @@ export function AppHeader({
         <View>
           <ThemedText style={styles.headerTitle}>{title}</ThemedText>
           {subtitle ? (
-            <ThemedText type="small" themeColor="textSecondary">
+            <ThemedText type="small" themeColor="textSecondary" style={styles.headerSubtitle}>
               {subtitle}
             </ThemedText>
           ) : null}
@@ -55,31 +55,36 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: Spacing.three,
-    paddingHorizontal: Spacing.four,
-    borderRadius: Spacing.four,
-    marginTop: Spacing.two,
+    paddingVertical: 10,
+    paddingHorizontal: Spacing.three,
+    borderRadius: 16,
+    marginTop: 4,
+    marginBottom: 8,
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.three,
+    gap: 10,
   },
   brandIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 34,
+    height: 34,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
   brandIconText: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
   },
   headerTitle: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: '700',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    lineHeight: 16,
   },
   headerRight: {
     flexDirection: 'row',
@@ -89,21 +94,21 @@ const styles = StyleSheet.create({
   liveBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 20,
+    gap: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 16,
     backgroundColor: 'rgba(34, 197, 94, 0.15)',
   },
   liveDot: {
-    width: 8,
-    height: 8,
+    width: 7,
+    height: 7,
     borderRadius: 4,
     backgroundColor: '#22c55e',
   },
   liveText: {
     color: '#22c55e',
-    fontWeight: '600',
-    fontSize: 12,
+    fontWeight: '700',
+    fontSize: 11,
   },
 });
