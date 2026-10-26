@@ -45,16 +45,14 @@ export function ProblemCard({ report }: ProblemCardProps) {
 
   const handleShare = () => {
     showToast(
-      language === 'hi'
-        ? 'समस्या लिंक क्लिपबोर्ड पर कॉपी हुआ!'
-        : 'Problem link copied to clipboard!',
+      'Problem link copied to clipboard!',
       'info'
     );
   };
 
   return (
     <View style={[styles.card, Shadows.sm]}>
-      {/* Top Media Image Banner with Verified Badge */}
+      
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`View public details for ${title}`}
@@ -62,30 +60,30 @@ export function ProblemCard({ report }: ProblemCardProps) {
         style={styles.imageContainer}>
         <Image source={{ uri: imageUrl }} style={styles.bannerImage} />
 
-        {/* Verified Badge Overlay */}
+        
         <View style={styles.verifiedBadge}>
           <CheckCircle2 size={12} color="#FFFFFF" />
           <Text style={styles.verifiedBadgeText}>
-            {language === 'hi' ? 'सत्यापित' : 'VERIFIED'}
+            VERIFIED
           </Text>
         </View>
 
-        {/* Status Badge in Top Right */}
+        
         <View style={styles.statusOverlay}>
           <StatusBadge status={report.status} size="sm" />
         </View>
       </Pressable>
 
-      {/* Content Body */}
+      
       <Pressable
         accessibilityRole="button"
         onPress={() => router.push(`/public-problem?id=${report.id}`)}
         style={styles.contentBody}>
-        {/* Category & Location */}
+        
         <View style={styles.metaHeader}>
           <View style={[styles.categoryPill, { backgroundColor: category.badgeBg }]}>
             <Text style={[styles.categoryText, { color: category.color }]}>
-              {language === 'hi' ? category.nameHi : category.nameEn}
+              {category.nameEn}
             </Text>
           </View>
 
@@ -97,25 +95,25 @@ export function ProblemCard({ report }: ProblemCardProps) {
           </View>
         </View>
 
-        {/* Title */}
+        
         <Text style={[styles.title, { fontSize: 15 * fontScale }]} numberOfLines={2}>
           {title}
         </Text>
 
-        {/* Description excerpt */}
+        
         <Text
           style={[styles.description, { fontSize: 13 * fontScale }]}
           numberOfLines={2}>
           {description}
         </Text>
 
-        {/* Impact stats: affected & supporters */}
+        
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
             <Users size={14} color={SamadhanColors.secondary} />
             <Text style={styles.statText}>
               <Text style={styles.statStrong}>{report.affectedCount}+</Text>{' '}
-              {language === 'hi' ? 'नागरिक प्रभावित' : 'citizens affected'}
+              citizens affected
             </Text>
           </View>
 
@@ -123,13 +121,13 @@ export function ProblemCard({ report }: ProblemCardProps) {
             <ThumbsUp size={14} color={SamadhanColors.action} />
             <Text style={styles.statText}>
               <Text style={styles.statStrong}>{report.supporters}</Text>{' '}
-              {language === 'hi' ? 'समर्थक' : 'supporters'}
+              supporters
             </Text>
           </View>
         </View>
       </Pressable>
 
-      {/* Action Footer: Support Button & Share */}
+      
       <View style={styles.actionFooter}>
         <Pressable
           accessibilityRole="button"
@@ -149,13 +147,7 @@ export function ProblemCard({ report }: ProblemCardProps) {
               styles.supportButtonText,
               isSupported && styles.supportButtonTextActive,
             ]}>
-            {isSupported
-              ? language === 'hi'
-                ? 'समर्थित ✓'
-                : 'Supported ✓'
-              : language === 'hi'
-              ? 'समर्थन दें'
-              : 'Support Issue'}
+{isSupported ? 'Supported ✓' : 'Support Issue'}
           </Text>
         </Pressable>
 
@@ -293,7 +285,7 @@ const styles = StyleSheet.create({
     borderColor: '#FED7AA',
     paddingVertical: 10,
     borderRadius: Radius.md,
-    minHeight: 44, // WCAG AA
+    minHeight: 44,
   },
   supportButtonActive: {
     backgroundColor: SamadhanColors.action,

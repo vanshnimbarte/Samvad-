@@ -41,21 +41,11 @@ export default function SubmitChallengeScreen() {
 
   const handleSubmit = () => {
     if (title.trim().length < 8) {
-      showToast(
-        language === 'hi'
-          ? 'कृपया कम से कम 8 अक्षरों का शीर्षक दर्ज करें।'
-          : 'Please enter a title of at least 8 characters.',
-        'error'
-      );
+      showToast('Please enter a title of at least 8 characters.', 'error');
       return;
     }
     if (description.trim().length < 20) {
-      showToast(
-        language === 'hi'
-          ? 'कृपया समस्या का विवरण कम से कम 20 अक्षरों में लिखें।'
-          : 'Please describe the problem in more detail (min 20 chars).',
-        'error'
-      );
+      showToast('Please describe the problem in more detail (min 20 chars).', 'error');
       return;
     }
     const result = submitChallenge({
@@ -84,10 +74,10 @@ export default function SubmitChallengeScreen() {
         }}
         style={styles.back}>
         <ArrowLeft size={20} color={SamadhanColors.primary} />
-        <Text style={styles.backText}>{language === 'hi' ? 'वापस' : 'Back'}</Text>
+        <Text style={styles.backText}>Back</Text>
       </Pressable>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={styles.h1}>{language === 'hi' ? 'स्थानीय चुनौती दर्ज करें' : 'Report a local challenge'}</Text>
+        <Text style={styles.h1}>Report a local challenge</Text>
         <Text style={styles.sub}>Photo → location → submit. AI classifies domain and finds similar nearby reports.</Text>
 
         <Text style={styles.label}>Challenge title *</Text>

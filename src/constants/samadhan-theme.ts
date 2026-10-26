@@ -1,77 +1,77 @@
-// Design tokens and theme system for Samadhan Connect
+
 
 export const SamadhanColors = {
-  // Brand trust & institutional colors
-  primary: '#1E3A8A',        // Deep Navy
-  primaryDark: '#0F172A',    // Midnight Charcoal
-  primaryLight: '#3B82F6',   // Soft Indigo
-  primarySurface: '#EFF6FF', // Ice Blue Tint
 
-  // Community progress & ecological impact
-  secondary: '#0D9488',      // Teal
-  secondaryDark: '#115E59',  // Deep Teal
-  secondaryLight: '#14B8A6', // Bright Teal
+  primary: '#1E3A8A',
+  primaryDark: '#0F172A',
+  primaryLight: '#3B82F6',
+  primarySurface: '#EFF6FF',
+
+
+  secondary: '#0D9488',
+  secondaryDark: '#115E59',
+  secondaryLight: '#14B8A6',
   secondarySurface: '#F0FDFA',
 
-  // Action CTA
-  action: '#EA580C',         // Warm Orange
+
+  action: '#EA580C',
   actionHover: '#C2410C',
   actionSurface: '#FFF7ED',
 
-  // Neutral backgrounds & surfaces
-  background: '#F8FAFC',     // Light grayish off-white
-  surface: '#FFFFFF',        // Card background
+
+  background: '#F8FAFC',
+  surface: '#FFFFFF',
   surfaceElevated: '#FFFFFF',
   surfaceSubtle: '#F1F5F9',
   border: '#E2E8F0',
   borderStrong: '#CBD5E1',
 
-  // Text colors
-  textPrimary: '#0F172A',    // High contrast charcoal (WCAG AAA)
-  textSecondary: '#475569',  // Accessible subtext
+
+  textPrimary: '#0F172A',
+  textSecondary: '#475569',
   textMuted: '#64748B',
   textInverse: '#FFFFFF',
 
-  // Status Colors (Strict 7-stage flow)
+
   status: {
     received: {
-      color: '#2563EB',      // Blue
+      color: '#2563EB',
       bg: '#EFF6FF',
       border: '#BFDBFE',
     },
     validated: {
-      color: '#7C3AED',      // Purple
+      color: '#7C3AED',
       bg: '#F5F3FF',
       border: '#DDD6FE',
     },
     assigned: {
-      color: '#4F46E5',      // Indigo
+      color: '#4F46E5',
       bg: '#EEF2FF',
       border: '#C7D2FE',
     },
     inProgress: {
-      color: '#EA580C',      // Orange
+      color: '#EA580C',
       bg: '#FFF7ED',
       border: '#FED7AA',
     },
     pilot: {
-      color: '#0D9488',      // Teal
+      color: '#0D9488',
       bg: '#F0FDFA',
       border: '#99F6E4',
     },
     deployed: {
-      color: '#16A34A',      // Green
+      color: '#16A34A',
       bg: '#F0FDF4',
       border: '#BBF7D0',
     },
     closed: {
-      color: '#64748B',      // Slate Gray
+      color: '#64748B',
       bg: '#F8FAFC',
       border: '#E2E8F0',
     },
   },
 
-  // Urgency colors
+
   urgency: {
     low: '#0284C7',
     medium: '#D97706',
@@ -79,7 +79,7 @@ export const SamadhanColors = {
     emergency: '#DC2626',
   },
 
-  // Network simulation states
+
   network: {
     online: '#16A34A',
     slow: '#D97706',
@@ -138,7 +138,7 @@ export const Shadows = {
   },
 };
 
-// 7 Official Report Statuses
+
 export type ReportStatus =
   | 'Received'
   | 'Validated'
@@ -164,78 +164,78 @@ export const REPORT_STATUS_CONFIG: Record<ReportStatus, StatusMeta> = {
   Received: {
     key: 'Received',
     labelEn: 'Received',
-    labelHi: 'प्राप्त हुआ',
+    labelHi: 'Received',
     color: SamadhanColors.status.received.color,
     bg: SamadhanColors.status.received.bg,
     borderColor: SamadhanColors.status.received.border,
     explanationEn: 'Your report was submitted successfully and logged in our system.',
-    explanationHi: 'आपकी रिपोर्ट सफलतापूर्वक दर्ज की गई है।',
+    explanationHi: 'Your report was submitted successfully and logged in our system.',
     iconName: 'Inbox',
   },
   Validated: {
     key: 'Validated',
     labelEn: 'Validated',
-    labelHi: 'सत्यापित',
+    labelHi: 'Validated',
     color: SamadhanColors.status.validated.color,
     bg: SamadhanColors.status.validated.bg,
     borderColor: SamadhanColors.status.validated.border,
     explanationEn: 'Our community coordinators have reviewed and verified the details.',
-    explanationHi: 'सामुदायिक समन्वयकों द्वारा विवरण की पुष्टि कर ली गई है।',
+    explanationHi: 'Our community coordinators have reviewed and verified the details.',
     iconName: 'CheckCircle2',
   },
   Assigned: {
     key: 'Assigned',
     labelEn: 'Assigned',
-    labelHi: 'सौंपा गया',
+    labelHi: 'Assigned',
     color: SamadhanColors.status.assigned.color,
     bg: SamadhanColors.status.assigned.bg,
     borderColor: SamadhanColors.status.assigned.border,
     explanationEn: 'The problem has been assigned to the responsible department or partner agency.',
-    explanationHi: 'संबंधित विभाग अथवा क्रियान्वयन एजेंसी को सौंपा गया है।',
+    explanationHi: 'The problem has been assigned to the responsible department or partner agency.',
     iconName: 'UserCheck',
   },
   'In Progress': {
     key: 'In Progress',
     labelEn: 'In Progress',
-    labelHi: 'प्रगति पर है',
+    labelHi: 'In Progress',
     color: SamadhanColors.status.inProgress.color,
     bg: SamadhanColors.status.inProgress.bg,
     borderColor: SamadhanColors.status.inProgress.border,
     explanationEn: 'Field team or contractors have initiated action on the ground.',
-    explanationHi: 'ज़मीनी स्तर पर समाधान कार्य आरंभ हो चुका है।',
+    explanationHi: 'Field team or contractors have initiated action on the ground.',
     iconName: 'Wrench',
   },
   Pilot: {
     key: 'Pilot',
     labelEn: 'Pilot Testing',
-    labelHi: 'प्रायोगिक परीक्षण',
+    labelHi: 'Pilot Testing',
     color: SamadhanColors.status.pilot.color,
     bg: SamadhanColors.status.pilot.bg,
     borderColor: SamadhanColors.status.pilot.border,
     explanationEn: 'A prototype solution is being tested with local community members.',
-    explanationHi: 'समाधान का स्थानीय स्तर पर परीक्षण किया जा रहा है।',
+    explanationHi: 'A prototype solution is being tested with local community members.',
     iconName: 'FlaskConical',
   },
   Deployed: {
     key: 'Deployed',
     labelEn: 'Deployed',
-    labelHi: 'लागू किया गया',
+    labelHi: 'Deployed',
     color: SamadhanColors.status.deployed.color,
     bg: SamadhanColors.status.deployed.bg,
     borderColor: SamadhanColors.status.deployed.border,
     explanationEn: 'The solution has been fully installed, repaired, or implemented.',
-    explanationHi: 'समस्या का स्थायी समाधान पूर्ण रूप से स्थापित कर दिया गया है।',
+    explanationHi: 'The solution has been fully installed, repaired, or implemented.',
     iconName: 'CheckCheck',
   },
   Closed: {
     key: 'Closed',
     labelEn: 'Closed',
-    labelHi: 'समाप्त / बंद',
+    labelHi: 'Closed',
     color: SamadhanColors.status.closed.color,
     bg: SamadhanColors.status.closed.bg,
     borderColor: SamadhanColors.status.closed.border,
     explanationEn: 'Resolution verified and officially signed off with community feedback.',
-    explanationHi: 'नागरिक संतुष्टि पुष्टि के बाद केस आधिकारिक रूप से बंद किया गया।',
+    explanationHi: 'Resolution verified and officially signed off with community feedback.',
     iconName: 'Archive',
   },
 };
@@ -250,7 +250,7 @@ export const STATUS_STEPS: ReportStatus[] = [
   'Closed',
 ];
 
-// 12 Required Problem Categories
+
 export interface CivicCategory {
   id: string;
   nameEn: string;
@@ -372,7 +372,7 @@ export const CIVIC_CATEGORIES: CivicCategory[] = [
   },
 ];
 
-// Translations Dictionary
+
 export type ChallengeStageKey =
   | 'Submitted'
   | 'Under Review'

@@ -61,10 +61,10 @@ export default function ReportProblemScreen() {
     showToast,
   } = useApp();
 
-  // Wizard Step State (1 to 6)
+
   const [currentStep, setCurrentStep] = useState<number>(1);
 
-  // Form State
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState('water');
@@ -92,26 +92,18 @@ export default function ReportProblemScreen() {
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [consentGiven, setConsentGiven] = useState(true);
 
-  // Validation errors
+
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Helper title suggestions
-  const suggestedTitles =
-    language === 'hi'
-      ? [
-          'प्राथमिक विद्यालय के पास खराब हैंडपंप',
-          'गांव की मुख्य सड़क पर बारिश का जलभराव',
-          'अस्पताल के निकट बंद सोलर स्ट्रीटलाइट',
-          'मोहल्ले में कचरे का अंबार और दुर्गंध',
-        ]
-      : [
-          'Broken handpump near the primary school',
-          'Flooded village road during monsoon',
-          'Missing streetlights near health center',
-          'Irregular garbage dumping in residential area',
-        ];
 
-  // Render category icons dynamically
+  const suggestedTitles = [
+    'Broken handpump near the primary school',
+    'Flooded village road during monsoon',
+    'Missing streetlights near health center',
+    'Irregular garbage dumping in residential area',
+  ];
+
+
   const getCategoryIcon = (iconName: string, color: string) => {
     switch (iconName) {
       case 'GraduationCap':
@@ -158,38 +150,32 @@ export default function ReportProblemScreen() {
     }
   };
 
-  // Step Validation
+
   const validateStep = (step: number): boolean => {
     const newErrors: Record<string, string> = {};
 
     if (step === 1) {
       if (!title.trim() || title.trim().length < 5) {
         newErrors.title =
-          language === 'hi'
-            ? 'कृपया समस्या का शीर्षक कम से कम 5 अक्षरों में लिखें।'
-            : 'Please enter a title of at least 5 characters.';
+          'Please enter a title of at least 5 characters.';
       }
       if (!description.trim() || description.trim().length < 15) {
         newErrors.description =
-          language === 'hi'
-            ? 'कृपया समस्या का विवरण कम से कम 15 अक्षरों में विस्तार से बताएं।'
-            : 'Please describe the problem in more detail (min 15 chars).';
+          'Please describe the problem in more detail (min 15 chars).';
       }
     }
 
     if (step === 2) {
       if (!categoryId) {
         newErrors.category =
-          language === 'hi' ? 'कृपया एक श्रेणी चुनें।' : 'Please select a category.';
+          'Please select a category.';
       }
     }
 
     if (step === 5) {
       if (!consentGiven) {
         newErrors.consent =
-          language === 'hi'
-            ? 'कृपया विवरण की सत्यता संबंधी सहमति दें।'
-            : 'Please confirm that the information provided is accurate.';
+          'Please confirm that the information provided is accurate.';
       }
     }
 
@@ -235,9 +221,7 @@ export default function ReportProblemScreen() {
     if (!consentGiven) {
       setErrors({
         consent:
-          language === 'hi'
-            ? 'कृपया विवरण की सत्यता संबंधी सहमति दें।'
-            : 'Please confirm that the information provided is accurate.',
+          'Please confirm that the information provided is accurate.',
       });
       return;
     }
@@ -279,17 +263,17 @@ export default function ReportProblemScreen() {
   };
 
   const stepLabels = [
-    language === 'hi' ? 'विवरण' : 'Describe',
-    language === 'hi' ? 'श्रेणी' : 'Category',
-    language === 'hi' ? 'साक्ष्य' : 'Evidence',
-    language === 'hi' ? 'स्थान' : 'Location',
-    language === 'hi' ? 'प्रभाव' : 'Details',
-    language === 'hi' ? 'समीक्षा' : 'Review',
+    'Describe',
+    'Category',
+    'Evidence',
+    'Location',
+    'Details',
+    'Review',
   ];
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-      {/* Header Bar */}
+      
       <View style={styles.topBar}>
         <Pressable
           accessibilityRole="button"
@@ -301,7 +285,7 @@ export default function ReportProblemScreen() {
 
         <View style={styles.topBarCenter}>
           <Text style={styles.wizardTitle}>
-            {language === 'hi' ? 'समस्या दर्ज करें' : 'Report a Problem'}
+            {'Report a Problem'}
           </Text>
           <Text style={styles.stepCounter}>
             {t('step')} {currentStep} {t('of')} 6: {stepLabels[currentStep - 1]}
@@ -315,12 +299,12 @@ export default function ReportProblemScreen() {
           style={styles.saveDraftBtn}>
           <Bookmark size={16} color={SamadhanColors.primary} />
           <Text style={styles.saveDraftText}>
-            {language === 'hi' ? 'ड्राफ्ट' : 'Draft'}
+            {'Draft'}
           </Text>
         </Pressable>
       </View>
 
-      {/* Progress Bar with 6 segments */}
+      
       <View style={styles.progressTrack}>
         {[1, 2, 3, 4, 5, 6].map((s) => (
           <View
@@ -338,31 +322,25 @@ export default function ReportProblemScreen() {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
-        {/* ================= STEP 1: DESCRIBE ================= */}
+        
         {currentStep === 1 && (
           <View style={styles.stepContainer}>
             <Text style={[styles.stepHeading, { fontSize: 18 * fontScale }]}>
-              {language === 'hi'
-                ? 'आपने क्या समस्या देखी?'
-                : 'What problem did you notice?'}
+              {'What problem did you notice?'}
             </Text>
             <Text style={styles.stepSubtext}>
-              {language === 'hi'
-                ? 'स्पष्ट और सरल भाषा में समस्या बताएं ताकि संबंधित विभाग तुरंत समझ सकें।'
-                : 'Explain what is happening, where it is happening, and who is affected.'}
+              {'Explain what is happening, where it is happening, and who is affected.'}
             </Text>
 
-            {/* Quick Demo Autofill Button for SIH Video */}
+            
             <Pressable
               onPress={() => {
-                setTitle(language === 'hi' ? 'प्राथमिक विद्यालय के निकट खराब हैंडपंप' : 'Broken handpump near Ormanjhi Primary School');
-                setDescription(language === 'hi'
-                  ? 'स्कूल परिसर में एकमात्र पेयजल हैंडपंप 3 सप्ताह से रेत फेंक रहा है और बंद पड़ा है। 200 से अधिक छात्र व ग्रामीण दूर से पानी लाने को विवश हैं।'
-                  : 'The solitary drinking water handpump on school grounds has been leaking sand and non-functional for 3 weeks. Over 200 students and villagers are affected.');
+                setTitle('Broken handpump near Ormanjhi Primary School');
+                setDescription('The solitary drinking water handpump on school grounds has been leaking sand and non-functional for 3 weeks. Over 200 students and villagers are affected.');
                 setCategoryId('water');
                 setUrgency('high');
                 setAffectedCount('220');
-                showToast(language === 'hi' ? 'डेमो शिकायत विवरण भर दिया गया!' : 'Demo grievance details autofilled!', 'info');
+                showToast('Demo grievance details autofilled!', 'info');
               }}
               style={{
                 flexDirection: 'row',
@@ -379,14 +357,14 @@ export default function ReportProblemScreen() {
               }}>
               <Sparkles size={14} color={SamadhanColors.primary} />
               <Text style={{ fontSize: 12, fontWeight: '700', color: SamadhanColors.primary }}>
-                {language === 'hi' ? '✨ डेमो समस्या स्वतः भरें (SIH वीडियो)' : '✨ Autofill Demo Grievance (SIH Video)'}
+                {'✨ Autofill Demo Grievance'}
               </Text>
             </Pressable>
 
-            {/* Title Field */}
+            
             <View style={styles.inputGroup}>
               <Text style={styles.label}>
-                {language === 'hi' ? 'समस्या का शीर्षक' : 'Problem Title'} *
+                {'Problem Title'} *
               </Text>
               <TextInput
                 accessibilityLabel="Problem Title Input"
@@ -396,9 +374,7 @@ export default function ReportProblemScreen() {
                   if (errors.title) setErrors((prev) => ({ ...prev, title: '' }));
                 }}
                 placeholder={
-                  language === 'hi'
-                    ? 'उदा. प्राथमिक विद्यालय के पास टूटा हुआ हैंडपंप'
-                    : 'e.g., Broken handpump near the primary school'
+                  'e.g., Broken handpump near the primary school'
                 }
                 placeholderTextColor={SamadhanColors.textMuted}
                 style={[styles.textInput, errors.title && styles.inputError]}
@@ -409,17 +385,17 @@ export default function ReportProblemScreen() {
                   <Text style={styles.errorText}>{errors.title}</Text>
                 ) : (
                   <Text style={styles.helperText}>
-                    {language === 'hi' ? 'छोटा और सटीक शीर्षक दें' : 'Give a clear, specific title'}
+                    {'Give a clear, specific title'}
                   </Text>
                 )}
                 <Text style={styles.charCount}>{title.length}/90</Text>
               </View>
 
-              {/* Suggested Titles */}
+              
               <View style={styles.suggestionsContainer}>
                 <Text style={styles.suggestionHeader}>
                   <Sparkles size={12} color={SamadhanColors.primary} />{' '}
-                  {language === 'hi' ? 'सुझाए गए शीर्षक:' : 'Suggested titles:'}
+                  {'Suggested titles:'}
                 </Text>
                 <View style={styles.suggestionChips}>
                   {suggestedTitles.map((st, i) => (
@@ -436,17 +412,17 @@ export default function ReportProblemScreen() {
               </View>
             </View>
 
-            {/* Voice Input Button */}
+            
             <VoiceInputButton
               onTranscriptionAvailable={(text) => {
                 setDescription((prev) => (prev ? `${prev} ${text}` : text));
               }}
             />
 
-            {/* Description Field */}
+            
             <View style={[styles.inputGroup, { marginTop: Spacing.md }]}>
               <Text style={styles.label}>
-                {language === 'hi' ? 'विस्तृत विवरण' : 'Problem Description'} *
+                {'Problem Description'} *
               </Text>
               <TextInput
                 accessibilityLabel="Problem Description Input"
@@ -457,9 +433,7 @@ export default function ReportProblemScreen() {
                     setErrors((prev) => ({ ...prev, description: '' }));
                 }}
                 placeholder={
-                  language === 'hi'
-                    ? 'विस्तार से समझाएं कि क्या हो रहा है, यह कब से है और नागरिकों को क्या परेशानी हो रही है...'
-                    : 'Explain what is happening, how long it has been broken, and how community members are affected...'
+                  'Explain what is happening, how long it has been broken, and how community members are affected...'
                 }
                 placeholderTextColor={SamadhanColors.textMuted}
                 style={[styles.textArea, errors.description && styles.inputError]}
@@ -473,9 +447,7 @@ export default function ReportProblemScreen() {
                   <Text style={styles.errorText}>{errors.description}</Text>
                 ) : (
                   <Text style={styles.helperText}>
-                    {language === 'hi'
-                      ? 'कम से कम 15 अक्षर आवश्यक हैं'
-                      : 'Minimum 15 characters required'}
+                    {'Minimum 15 characters required'}
                   </Text>
                 )}
                 <Text style={styles.charCount}>{description.length}/500</Text>
@@ -484,21 +456,17 @@ export default function ReportProblemScreen() {
           </View>
         )}
 
-        {/* ================= STEP 2: CATEGORY ================= */}
+        
         {currentStep === 2 && (
           <View style={styles.stepContainer}>
             <Text style={[styles.stepHeading, { fontSize: 18 * fontScale }]}>
-              {language === 'hi'
-                ? 'यह किस प्रकार की समस्या है?'
-                : 'What type of problem is this?'}
+              {'What type of problem is this?'}
             </Text>
             <Text style={styles.stepSubtext}>
-              {language === 'hi'
-                ? 'सही श्रेणी चुनने से रिपोर्ट सीधे संबंधित विभाग तक पहुंचती है।'
-                : 'Selecting the right category routes your issue to the correct line department.'}
+              {'Selecting the right category routes your issue to the correct line department.'}
             </Text>
 
-            {/* Category Search Input */}
+            
             <View style={styles.searchBox}>
               <Search size={18} color={SamadhanColors.textMuted} />
               <TextInput
@@ -506,16 +474,14 @@ export default function ReportProblemScreen() {
                 value={categorySearch}
                 onChangeText={setCategorySearch}
                 placeholder={
-                  language === 'hi'
-                    ? 'श्रेणी खोजें (उदा. पानी, सड़क, स्कूल)...'
-                    : 'Search categories (e.g., water, road, school)...'
+                  'Search categories (e.g., water, road, school)...'
                 }
                 placeholderTextColor={SamadhanColors.textMuted}
                 style={styles.searchInput}
               />
             </View>
 
-            {/* 12 Selectable Category Cards */}
+            
             <View style={styles.categoryGrid}>
               {filteredCategories.map((cat) => {
                 const isSelected = categoryId === cat.id;
@@ -569,18 +535,14 @@ export default function ReportProblemScreen() {
           </View>
         )}
 
-        {/* ================= STEP 3: EVIDENCE ================= */}
+        
         {currentStep === 3 && (
           <View style={styles.stepContainer}>
             <Text style={[styles.stepHeading, { fontSize: 18 * fontScale }]}>
-              {language === 'hi'
-                ? 'क्या आप कोई फोटो या वीडियो जोड़ सकते हैं?'
-                : 'Can you share any evidence?'}
+              {'Can you share any evidence?'}
             </Text>
             <Text style={styles.stepSubtext}>
-              {language === 'hi'
-                ? 'फोटो या वीडियो से अधिकारियों को समस्या तुरंत प्रमाणित करने में मदद मिलती है।'
-                : 'Evidence accelerates validation. Images are auto-compressed for low networks.'}
+              {'Evidence accelerates validation. Images are auto-compressed for low networks.'}
             </Text>
 
             <MediaUploader
@@ -591,46 +553,40 @@ export default function ReportProblemScreen() {
           </View>
         )}
 
-        {/* ================= STEP 4: LOCATION ================= */}
+        
         {currentStep === 4 && (
           <View style={styles.stepContainer}>
             <Text style={[styles.stepHeading, { fontSize: 18 * fontScale }]}>
-              {language === 'hi' ? 'समस्या कहां स्थित है?' : 'Where is the problem?'}
+              {'Where is the problem?'}
             </Text>
             <Text style={styles.stepSubtext}>
-              {language === 'hi'
-                ? 'सटीक स्थान या निकटतम पहचान चिह्न दें ताकि दल मौके पर पहुंच सके।'
-                : 'Provide exact GPS coordinates or select your district, block, and ward.'}
+              {'Provide exact GPS coordinates or select your district, block, and ward.'}
             </Text>
 
             <LocationPicker value={location} onChange={setLocation} />
           </View>
         )}
 
-        {/* ================= STEP 5: DETAILS & IMPACT ================= */}
+        
         {currentStep === 5 && (
           <View style={styles.stepContainer}>
             <Text style={[styles.stepHeading, { fontSize: 18 * fontScale }]}>
-              {language === 'hi'
-                ? 'प्रभाव को समझने में हमारी सहायता करें'
-                : 'Help us understand the impact'}
+              {'Help us understand the impact'}
             </Text>
             <Text style={styles.stepSubtext}>
-              {language === 'hi'
-                ? 'गंभीरता और प्रभावित लोगों की संख्या से प्राथमिकता तय करने में मदद मिलती है।'
-                : 'Urgency and affected citizen counts help prioritize resources on the ground.'}
+              {'Urgency and affected citizen counts help prioritize resources on the ground.'}
             </Text>
 
-            {/* Urgency Selector */}
+            
             <Text style={styles.fieldLabel}>
-              {language === 'hi' ? 'यह समस्या कितनी गंभीर / अत्यावश्यक है?' : 'How urgent is this problem?'} *
+              {'How urgent is this problem?'} *
             </Text>
             <View style={styles.urgencyGrid}>
               {[
-                { key: 'low', labelEn: 'Low', labelHi: 'सामान्य', color: '#0284C7' },
-                { key: 'medium', labelEn: 'Medium', labelHi: 'मध्यम', color: '#D97706' },
-                { key: 'high', labelEn: 'High', labelHi: 'गंभीर', color: '#EA580C' },
-                { key: 'emergency', labelEn: 'Emergency', labelHi: 'आपातकालीन', color: '#DC2626' },
+                { key: 'low', labelEn: 'Low', labelHi: 'Low', color: '#0284C7' },
+                { key: 'medium', labelEn: 'Medium', labelHi: 'Medium', color: '#D97706' },
+                { key: 'high', labelEn: 'High', labelHi: 'High', color: '#EA580C' },
+                { key: 'emergency', labelEn: 'Emergency', labelHi: 'Emergency', color: '#DC2626' },
               ].map((u) => (
                 <Pressable
                   key={u.key}
@@ -655,12 +611,10 @@ export default function ReportProblemScreen() {
               ))}
             </View>
 
-            {/* Affected Count */}
+            
             <View style={[styles.inputGroup, { marginTop: Spacing.lg }]}>
               <Text style={styles.fieldLabel}>
-                {language === 'hi'
-                  ? 'लगभग कितने लोग प्रभावित हैं?'
-                  : 'How many people are affected?'}
+                {'How many people are affected?'}
               </Text>
               <TextInput
                 accessibilityLabel="Number of people affected"
@@ -673,10 +627,10 @@ export default function ReportProblemScreen() {
               />
             </View>
 
-            {/* Who is affected */}
+            
             <View style={[styles.inputGroup, { marginTop: Spacing.md }]}>
               <Text style={styles.fieldLabel}>
-                {language === 'hi' ? 'कौन-कौन प्रभावित हैं?' : 'Who is affected?'}
+                {'Who is affected?'}
               </Text>
               <View style={styles.checkboxGrid}>
                 {[
@@ -718,16 +672,14 @@ export default function ReportProblemScreen() {
               </View>
             </View>
 
-            {/* Recurring Problem Toggle */}
+            
             <View style={styles.toggleRow}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.toggleTitle}>
-                  {language === 'hi' ? 'क्या यह बार-बार होने वाली समस्या है?' : 'Is this a recurring problem?'}
+                  {'Is this a recurring problem?'}
                 </Text>
                 <Text style={styles.toggleDesc}>
-                  {language === 'hi'
-                    ? 'हर साल या बार-बार दोहराई जाती है'
-                    : 'Happens every monsoon, seasonal, or persists after temporary fixes'}
+                  {'Happens every monsoon, seasonal, or persists after temporary fixes'}
                 </Text>
               </View>
               <Switch
@@ -737,16 +689,14 @@ export default function ReportProblemScreen() {
               />
             </View>
 
-            {/* Anonymous Toggle */}
+            
             <View style={styles.toggleRow}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.toggleTitle}>
-                  {language === 'hi' ? 'गुमनाम रूप से दर्ज करें' : 'Submit Anonymously'}
+                  {'Submit Anonymously'}
                 </Text>
                 <Text style={styles.toggleDesc}>
-                  {language === 'hi'
-                    ? 'आपका नाम व संपर्क सार्वजनिक रूप से प्रदर्शित नहीं होगा।'
-                    : 'Your name will not be shown publicly on community boards.'}
+                  {'Your name will not be shown publicly on community boards.'}
                 </Text>
               </View>
               <Switch
@@ -756,7 +706,7 @@ export default function ReportProblemScreen() {
               />
             </View>
 
-            {/* Consent Checkbox */}
+            
             <Pressable
               accessibilityRole="checkbox"
               accessibilityState={{ checked: consentGiven }}
@@ -770,9 +720,7 @@ export default function ReportProblemScreen() {
                 {consentGiven && <Check size={12} color="#FFFFFF" strokeWidth={3} />}
               </View>
               <Text style={styles.consentText}>
-                {language === 'hi'
-                  ? 'मैं प्रमाणित करता/करती हूँ कि दी गई जानकारी सत्य है और समाधान सहायता हेतु साझा की जा सकती है।'
-                  : 'I confirm that the details provided are accurate and can be shared with resolution agencies.'}
+                {'I confirm that the details provided are accurate and can be shared with resolution agencies.'}
               </Text>
             </Pressable>
             {errors.consent && (
@@ -781,25 +729,23 @@ export default function ReportProblemScreen() {
           </View>
         )}
 
-        {/* ================= STEP 6: REVIEW & SUBMIT ================= */}
+        
         {currentStep === 6 && (
           <View style={styles.stepContainer}>
             <Text style={[styles.stepHeading, { fontSize: 18 * fontScale }]}>
-              {language === 'hi' ? 'अपनी रिपोर्ट की समीक्षा करें' : 'Review your report'}
+              {'Review your report'}
             </Text>
             <Text style={styles.stepSubtext}>
-              {language === 'hi'
-                ? 'सबमिट करने से पहले विवरण जांच लें। किसी भी खंड को बदलने के लिए ‘संपादित करें’ दबाएं।'
-                : 'Double-check all details. Tap "Edit" on any section to modify.'}
+              {'Double-check all details. Tap "Edit" on any section to modify.'}
             </Text>
 
-            {/* Summary Card */}
+            
             <View style={[styles.reviewCard, Shadows.sm]}>
-              {/* Section 1: Title & Description */}
+              
               <View style={styles.reviewSection}>
                 <View style={styles.reviewSecHeader}>
                   <Text style={styles.reviewSecTitle}>
-                    {language === 'hi' ? '1. समस्या विवरण' : '1. Problem Description'}
+                    {'1. Problem Description'}
                   </Text>
                   <Pressable
                     accessibilityRole="button"
@@ -808,7 +754,7 @@ export default function ReportProblemScreen() {
                     style={styles.editBtn}>
                     <Edit3 size={14} color={SamadhanColors.primary} />
                     <Text style={styles.editBtnText}>
-                      {language === 'hi' ? 'बदलें' : 'Edit'}
+                      {'Edit'}
                     </Text>
                   </Pressable>
                 </View>
@@ -816,11 +762,11 @@ export default function ReportProblemScreen() {
                 <Text style={styles.reviewValueDesc}>{description}</Text>
               </View>
 
-              {/* Section 2: Category */}
+              
               <View style={styles.reviewSection}>
                 <View style={styles.reviewSecHeader}>
                   <Text style={styles.reviewSecTitle}>
-                    {language === 'hi' ? '2. श्रेणी' : '2. Category'}
+                    {'2. Category'}
                   </Text>
                   <Pressable
                     accessibilityRole="button"
@@ -829,7 +775,7 @@ export default function ReportProblemScreen() {
                     style={styles.editBtn}>
                     <Edit3 size={14} color={SamadhanColors.primary} />
                     <Text style={styles.editBtnText}>
-                      {language === 'hi' ? 'बदलें' : 'Edit'}
+                      {'Edit'}
                     </Text>
                   </Pressable>
                 </View>
@@ -838,11 +784,11 @@ export default function ReportProblemScreen() {
                 </Text>
               </View>
 
-              {/* Section 3: Evidence */}
+              
               <View style={styles.reviewSection}>
                 <View style={styles.reviewSecHeader}>
                   <Text style={styles.reviewSecTitle}>
-                    {language === 'hi' ? '3. साक्ष्य (Evidence)' : '3. Evidence Attached'}
+                    {'3. Evidence Attached'}
                   </Text>
                   <Pressable
                     accessibilityRole="button"
@@ -851,28 +797,24 @@ export default function ReportProblemScreen() {
                     style={styles.editBtn}>
                     <Edit3 size={14} color={SamadhanColors.primary} />
                     <Text style={styles.editBtnText}>
-                      {language === 'hi' ? 'बदलें' : 'Edit'}
+                      {'Edit'}
                     </Text>
                   </Pressable>
                 </View>
                 <Text style={styles.reviewValueDesc}>
                   {mediaList.length > 0
                     ? `${mediaList.length} ${
-                        language === 'hi'
-                          ? 'फ़ाइलें संकुचित व संलग्न हैं'
-                          : 'optimized media files attached'
+                        'optimized media files attached'
                       }`
-                    : language === 'hi'
-                    ? 'कोई मीडिया संलग्न नहीं (छोड़ा गया)'
                     : 'No media attached (Skipped)'}
                 </Text>
               </View>
 
-              {/* Section 4: Location */}
+              
               <View style={styles.reviewSection}>
                 <View style={styles.reviewSecHeader}>
                   <Text style={styles.reviewSecTitle}>
-                    {language === 'hi' ? '4. स्थान' : '4. Location'}
+                    {'4. Location'}
                   </Text>
                   <Pressable
                     accessibilityRole="button"
@@ -881,7 +823,7 @@ export default function ReportProblemScreen() {
                     style={styles.editBtn}>
                     <Edit3 size={14} color={SamadhanColors.primary} />
                     <Text style={styles.editBtnText}>
-                      {language === 'hi' ? 'बदलें' : 'Edit'}
+                      {'Edit'}
                     </Text>
                   </Pressable>
                 </View>
@@ -893,11 +835,11 @@ export default function ReportProblemScreen() {
                 </Text>
               </View>
 
-              {/* Section 5: Urgency & Impact */}
+              
               <View style={[styles.reviewSection, { borderBottomWidth: 0 }]}>
                 <View style={styles.reviewSecHeader}>
                   <Text style={styles.reviewSecTitle}>
-                    {language === 'hi' ? '5. गंभीरता एवं प्रभाव' : '5. Urgency & Impact'}
+                    {'5. Urgency & Impact'}
                   </Text>
                   <Pressable
                     accessibilityRole="button"
@@ -906,52 +848,50 @@ export default function ReportProblemScreen() {
                     style={styles.editBtn}>
                     <Edit3 size={14} color={SamadhanColors.primary} />
                     <Text style={styles.editBtnText}>
-                      {language === 'hi' ? 'बदलें' : 'Edit'}
+                      {'Edit'}
                     </Text>
                   </Pressable>
                 </View>
                 <Text style={styles.reviewValueDesc}>
-                  • {language === 'hi' ? 'गंभीरता स्तर: ' : 'Urgency: '}
+                  • {'Urgency: '}
                   <Text style={{ fontWeight: '700', textTransform: 'capitalize' }}>
                     {urgency}
                   </Text>
                 </Text>
                 <Text style={styles.reviewValueDesc}>
-                  • {language === 'hi' ? 'प्रभावित लोग: ' : 'Affected: '}{' '}
+                  • {'Affected: '}{' '}
                   {affectedCount}+ citizens ({affectedGroups.join(', ')})
                 </Text>
                 <Text style={styles.reviewValueDesc}>
-                  • {language === 'hi' ? 'गुमनाम प्रविष्टि: ' : 'Anonymous: '}{' '}
-                  {isAnonymous ? (language === 'hi' ? 'हाँ' : 'Yes') : (language === 'hi' ? 'नहीं' : 'No')}
+                  • {'Anonymous: '}{' '}
+                  {isAnonymous ? ('Yes') : ('No')}
                 </Text>
               </View>
             </View>
 
-            {/* Official Review Notice */}
+            
             <View style={styles.officialNotice}>
               <ShieldCheck size={18} color="#16A34A" />
               <Text style={styles.officialNoticeText}>
-                {language === 'hi'
-                  ? 'आपकी रिपोर्ट संबंधित सरकारी विभागों और समाधान भागीदारों के साथ साझा करने से पहले समन्वयकों द्वारा जांची जाएगी।'
-                  : 'Your report will be reviewed by local coordinators before it is shared with relevant organizations.'}
+                {'Your report will be reviewed by local coordinators before it is shared with relevant organizations.'}
               </Text>
             </View>
           </View>
         )}
 
-        {/* Action Controls (Back, Continue, Submit) */}
+        
         <View style={styles.wizardFooter}>
           {currentStep < 6 ? (
             <View style={styles.wizardNavRow}>
               <Button
-                title={language === 'hi' ? 'पीछे' : 'Back'}
+                title={'Back'}
                 onPress={handleBack}
                 variant="outline"
                 size="lg"
                 style={styles.halfBtn}
               />
               <Button
-                title={language === 'hi' ? 'आगे बढ़ें' : 'Continue'}
+                title={'Continue'}
                 onPress={handleNext}
                 variant="action"
                 size="lg"
@@ -961,7 +901,7 @@ export default function ReportProblemScreen() {
           ) : (
             <View style={styles.submitColumn}>
               <Button
-                title={language === 'hi' ? 'रिपोर्ट सबमिट करें' : 'Submit Report'}
+                title={'Submit Report'}
                 onPress={handleSubmit}
                 variant="action"
                 size="lg"
@@ -969,7 +909,7 @@ export default function ReportProblemScreen() {
                 style={styles.fullBtn}
               />
               <Button
-                title={language === 'hi' ? 'ड्राफ्ट के रूप में सहेजें' : 'Save as Draft'}
+                title={'Save as Draft'}
                 onPress={handleSaveDraft}
                 variant="outline"
                 size="md"

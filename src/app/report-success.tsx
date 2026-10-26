@@ -37,57 +37,47 @@ export default function ReportSuccessScreen() {
   const params = useLocalSearchParams<{ id?: string }>();
   const reportId = params.id || 'SC-JH-84920';
 
-  const { language, fontScale, showToast } = useApp();
+  const { fontScale, showToast } = useApp();
 
   const handleCopyId = () => {
-    showToast(
-      language === 'hi'
-        ? `ट्रैकिंग आईडी #${reportId} कॉपी की गई!`
-        : `Tracking ID #${reportId} copied to clipboard!`,
-      'success'
-    );
+    showToast(`Tracking ID #${reportId} copied to clipboard!`, 'success');
   };
 
   const handleShareId = () => {
-    showToast(
-      language === 'hi'
-        ? `रिपोर्ट #${reportId} साझा करने के लिए तैयार!`
-        : `Report #${reportId} ready to share with community members!`,
-      'info'
-    );
+    showToast(`Report #${reportId} ready to share with community members!`, 'info');
   };
 
   const nextSteps = [
     {
       num: '1',
       titleEn: 'We review your report',
-      titleHi: 'रिपोर्ट की प्रारंभिक समीक्षा',
+      titleHi: 'We review your report',
       descEn: 'Community coordinators verify language and assign preliminary priority.',
-      descHi: 'स्थानीय समन्वयक विवरण की समीक्षा कर प्रारंभिक प्राथमिकता तय करेंगे।',
+      descHi: 'Community coordinators verify language and assign preliminary priority.',
       icon: Search,
     },
     {
       num: '2',
       titleEn: 'We verify the details',
-      titleHi: 'मौके पर स्थल सत्यापन',
+      titleHi: 'We verify the details',
       descEn: 'Ground coordinator inspects the location and confirms impact on citizens.',
-      descHi: 'ज़मीनी समन्वयक स्थल का मुआयना कर प्रभावित नागरिकों से पुष्टि करेंगे।',
+      descHi: 'Ground coordinator inspects the location and confirms impact on citizens.',
       icon: ShieldCheck,
     },
     {
       num: '3',
       titleEn: 'Connect with relevant organizations',
-      titleHi: 'संबंधित विभाग/संस्था से समन्वय',
+      titleHi: 'Connect with relevant organizations',
       descEn: 'Issue routed to district administration, panchayat, or partner agency.',
-      descHi: 'समस्या को ज़िला प्रशासन, संबंधित सरकारी विभाग अथवा एजेंसी को भेजा जाएगा।',
+      descHi: 'Issue routed to district administration, panchayat, or partner agency.',
       icon: Building,
     },
     {
       num: '4',
       titleEn: 'You receive progress updates',
-      titleHi: 'हर चरण पर आपको प्रगति सूचना',
+      titleHi: 'You receive progress updates',
       descEn: 'Get SMS and in-app alerts at every stage until verified resolution.',
-      descHi: 'समाधान होने तक आपको प्रत्येक चरण पर ऐप व एसएमएस द्वारा सूचना प्राप्त होगी।',
+      descHi: 'Get SMS and in-app alerts at every stage until verified resolution.',
       icon: BellRing,
     },
   ];
@@ -98,7 +88,6 @@ export default function ReportSuccessScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
-        {/* Success Icon & Heading */}
         <View style={styles.celebrationBox}>
           <View style={styles.successIconOuter}>
             <View style={styles.successIconInner}>
@@ -107,23 +96,18 @@ export default function ReportSuccessScreen() {
           </View>
 
           <Text style={[styles.heading, { fontSize: 20 * fontScale }]}>
-            {language === 'hi'
-              ? 'आपकी रिपोर्ट दर्ज कर ली गई है'
-              : 'Your report has been submitted'}
+            Your report has been submitted
           </Text>
 
           <Text style={styles.subheading}>
-            {language === 'hi'
-              ? 'स्थानीय समस्या को सामने लाने और समुदाय को बेहतर बनाने में सहयोग के लिए धन्यवाद।'
-              : 'Thank you for stepping up for your community. Your report has been officially logged.'}
+            Thank you for stepping up for your community. Your report has been officially logged.
           </Text>
         </View>
 
-        {/* Tracking Card */}
         <View style={[styles.trackingCard, Shadows.md]}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardLabel}>
-              {language === 'hi' ? 'आधिकारिक ट्रैकिंग आईडी' : 'Official Report Tracking ID'}
+              Official Report Tracking ID
             </Text>
             <StatusBadge status="Received" size="sm" />
           </View>
@@ -139,7 +123,7 @@ export default function ReportSuccessScreen() {
                 style={styles.smallActionBtn}>
                 <Copy size={15} color={SamadhanColors.primary} />
                 <Text style={styles.smallActionText}>
-                  {language === 'hi' ? 'कॉपी' : 'Copy'}
+                  Copy
                 </Text>
               </Pressable>
 
@@ -150,7 +134,7 @@ export default function ReportSuccessScreen() {
                 style={styles.smallActionBtn}>
                 <Share2 size={15} color={SamadhanColors.primary} />
                 <Text style={styles.smallActionText}>
-                  {language === 'hi' ? 'साझा' : 'Share'}
+                  Share
                 </Text>
               </Pressable>
             </View>
@@ -159,17 +143,14 @@ export default function ReportSuccessScreen() {
           <View style={styles.timestampRow}>
             <Clock size={12} color={SamadhanColors.textMuted} />
             <Text style={styles.timestampText}>
-              {language === 'hi'
-                ? 'प्रविष्टि समय: आज, 14 सितम्बर 2026, 11:45 AM'
-                : 'Submitted: Today, 14 Sep 2026, 11:45 AM'}
+              Submitted: Today, 14 Sep 2026, 11:45 AM
             </Text>
           </View>
         </View>
 
-        {/* What Happens Next Section */}
         <View style={styles.nextStepsSection}>
           <Text style={[styles.sectionTitle, { fontSize: 16 * fontScale }]}>
-            {language === 'hi' ? 'आगे क्या होगा? (Next Steps)' : 'What happens next?'}
+            What happens next?
           </Text>
 
           <View style={styles.stepsList}>
@@ -182,10 +163,10 @@ export default function ReportSuccessScreen() {
                   </View>
                   <View style={styles.stepTextContent}>
                     <Text style={[styles.stepTitle, { fontSize: 13 * fontScale }]}>
-                      {language === 'hi' ? step.titleHi : step.titleEn}
+                      {step.titleEn}
                     </Text>
                     <Text style={styles.stepDesc}>
-                      {language === 'hi' ? step.descHi : step.descEn}
+                      {step.descEn}
                     </Text>
                   </View>
                 </View>
@@ -194,11 +175,9 @@ export default function ReportSuccessScreen() {
           </View>
         </View>
 
-        {/* Action Buttons */}
         <View style={styles.actionsContainer}>
-          {/* Primary CTA: Track This Report */}
           <Button
-            title={language === 'hi' ? 'इस रिपोर्ट को ट्रैक करें' : 'Track This Report'}
+            title="Track This Report"
             onPress={() => router.push(`/report-detail?id=${reportId}`)}
             variant="action"
             size="lg"
@@ -206,9 +185,8 @@ export default function ReportSuccessScreen() {
             style={styles.mainBtn}
           />
 
-          {/* Submit Another Report */}
           <Button
-            title={language === 'hi' ? 'दूसरी समस्या दर्ज करें' : 'Submit Another Report'}
+            title="Submit Another Report"
             onPress={() => router.push('/report-problem')}
             variant="outline"
             size="md"
@@ -216,9 +194,8 @@ export default function ReportSuccessScreen() {
             style={{ marginTop: Spacing.sm }}
           />
 
-          {/* Return Home */}
           <Button
-            title={language === 'hi' ? 'मुख्य पृष्ठ पर लौटें' : 'Return to Home'}
+            title="Return to Home"
             onPress={() => router.replace('/')}
             variant="ghost"
             size="md"

@@ -60,11 +60,11 @@ export default function ReportDetailScreen() {
   const report = getReportById(reportId) || {
     id: reportId,
     titleEn: 'Broken handpump near Ormanjhi Primary School',
-    titleHi: 'ओरमांझी प्राथमिक विद्यालय के निकट खराब हैंडपंप',
+    titleHi: 'Broken handpump near Ormanjhi Primary School',
     descriptionEn:
       'The solitary drinking water handpump on school grounds has been leaking sand and non-functional for 3 weeks.',
     descriptionHi:
-      'स्कूल परिसर में एकमात्र पेयजल हैंडपंप 3 सप्ताह से रेत फेंक रहा है और बंद पड़ा है।',
+      'The solitary drinking water handpump on school grounds has been leaking sand and non-functional for 3 weeks.',
     categoryId: 'water',
     status: 'In Progress' as const,
     urgency: 'high' as const,
@@ -92,7 +92,7 @@ export default function ReportDetailScreen() {
         type: 'image' as const,
         url: 'https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=800&q=80',
         captionEn: 'Damaged riser pipe',
-        captionHi: 'क्षतिग्रस्त पाइप',
+        captionHi: 'Damaged riser pipe',
       },
     ],
     responsibleOrg: {
@@ -102,7 +102,7 @@ export default function ReportDetailScreen() {
     },
     nextExpectedAction: {
       labelEn: 'Cylinder replacement and deep flushing by mobile borewell rig',
-      labelHi: 'सिलेंडर प्रतिस्थापन और मोबाइल रिग द्वारा गहरी सफाई',
+      labelHi: 'Cylinder replacement and deep flushing by mobile borewell rig',
       estimatedDate: '18 Sep 2026',
     },
     timeline: [],
@@ -117,14 +117,12 @@ export default function ReportDetailScreen() {
     CIVIC_CATEGORIES.find((c) => c.id === report.categoryId) ||
     CIVIC_CATEGORIES[0];
 
-  const title = language === 'hi' ? report.titleHi : report.titleEn;
-  const description = language === 'hi' ? report.descriptionHi : report.descriptionEn;
+  const title = report.titleEn;
+  const description = report.descriptionEn;
 
   const handleShare = () => {
     showToast(
-      language === 'hi'
-        ? 'रिपोर्ट लिंक कॉपी हो गया है।'
-        : 'Report tracking link copied to clipboard.',
+      'Report tracking link copied to clipboard.',
       'info'
     );
   };
@@ -137,7 +135,7 @@ export default function ReportDetailScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-      {/* Header Bar */}
+      
       <View style={styles.headerBar}>
         <Pressable
           accessibilityRole="button"
@@ -168,9 +166,7 @@ export default function ReportDetailScreen() {
             accessibilityLabel="Report concern or flag duplicate"
             onPress={() =>
               showToast(
-                language === 'hi'
-                  ? 'चिंता दर्ज करने का विकल्प खोला गया।'
-                  : 'Concern reporting menu opened.',
+                'Concern reporting menu opened.',
                 'info'
               )
             }
@@ -184,7 +180,7 @@ export default function ReportDetailScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
-        {/* Title & Status Card */}
+        
         <View style={[styles.mainCard, Shadows.sm]}>
           <View style={styles.statusBadgeRow}>
             <StatusBadge status={report.status} size="md" />
@@ -248,27 +244,27 @@ export default function ReportDetailScreen() {
             <View style={styles.metaItem}>
               <Users size={13} color={SamadhanColors.textMuted} />
               <Text style={styles.subMetaText}>
-                {report.affectedCount}+ {language === 'hi' ? 'प्रभावित' : 'affected'}
+                {report.affectedCount}+ affected
               </Text>
             </View>
           </View>
 
-          {/* Description */}
+          
           <Text style={[styles.description, { fontSize: 13 * fontScale }]}>
             {description}
           </Text>
 
-          {/* Location Detailed Landmark */}
+          
           {report.location.address && (
             <View style={styles.landmarkBox}>
               <Text style={styles.landmarkLabel}>
-                {language === 'hi' ? 'पहचान चिह्न (Landmark):' : 'Landmark / Specific Address:'}
+                Landmark / Specific Address:
               </Text>
               <Text style={styles.landmarkValue}>{report.location.address}</Text>
             </View>
           )}
 
-          {/* Interactive Support Button */}
+          
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={isSupported ? 'Remove support' : 'Support this issue'}
@@ -287,29 +283,23 @@ export default function ReportDetailScreen() {
                 styles.supportBarText,
                 isSupported && styles.supportBarTextActive,
               ]}>
-              {isSupported
-                ? language === 'hi'
-                  ? `आप और अन्य ${report.supporters} नागरिक समर्थन कर रहे हैं`
-                  : `You and ${report.supporters} others are supporting this`
-                : language === 'hi'
-                ? `इस समस्या का समर्थन करें (${report.supporters} समर्थक)`
-                : `Support this problem (${report.supporters} supporters)`}
+{isSupported ? `You and ${report.supporters} others are supporting this` : `Support this problem (${report.supporters} supporters)`}
             </Text>
           </Pressable>
         </View>
 
-        {/* Evidence Media Gallery */}
+        
         {report.media && report.media.length > 0 && (
           <View style={styles.mediaSection}>
             <Text style={[styles.sectionTitle, { fontSize: 15 * fontScale }]}>
-              {language === 'hi' ? 'संलग्न साक्ष्य एवं तस्वीरें' : 'Evidence Photos & Videos'}
+              Evidence Photos & Videos
             </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.mediaRow}>
               {report.media.map((med, i) => (
                 <View key={i} style={styles.mediaItem}>
                   <Image source={{ uri: med.url }} style={styles.mediaImg} />
                   <Text style={styles.mediaCaption}>
-                    {language === 'hi' ? med.captionHi : med.captionEn}
+                    {med.captionEn}
                   </Text>
                 </View>
               ))}
@@ -317,11 +307,11 @@ export default function ReportDetailScreen() {
           </View>
         )}
 
-        {/* Before & After Section (if available) */}
+        
         {report.beforeAfter && (
           <View style={styles.beforeAfterSection}>
             <Text style={[styles.sectionTitle, { fontSize: 15 * fontScale }]}>
-              {language === 'hi' ? 'समाधान तुलना (Before & After)' : 'Solution Progress (Before & After)'}
+              Solution Progress (Before & After)
             </Text>
 
             <View style={styles.comparisonGrid}>
@@ -331,7 +321,7 @@ export default function ReportDetailScreen() {
                   style={styles.compImg}
                 />
                 <View style={styles.compLabelBefore}>
-                  <Text style={styles.compLabelText}>BEFORE (पहले)</Text>
+                  <Text style={styles.compLabelText}>BEFORE</Text>
                 </View>
               </View>
 
@@ -341,20 +331,18 @@ export default function ReportDetailScreen() {
                   style={styles.compImg}
                 />
                 <View style={styles.compLabelAfter}>
-                  <Text style={styles.compLabelText}>AFTER (बाद में)</Text>
+                  <Text style={styles.compLabelText}>AFTER</Text>
                 </View>
               </View>
             </View>
 
             <Text style={styles.beforeAfterNote}>
-              {language === 'hi'
-                ? report.beforeAfter.noteHi
-                : report.beforeAfter.noteEn}
+              {report.beforeAfter.noteEn}
             </Text>
           </View>
         )}
 
-        {/* 7-STAGE STATUS TIMELINE */}
+        
         <StatusTimeline
           currentStatus={report.status}
           timelineEvents={report.timeline}
@@ -362,30 +350,28 @@ export default function ReportDetailScreen() {
           nextExpectedAction={report.nextExpectedAction}
         />
 
-        {/* Quick Citizen Actions Toolbar */}
+        
         <View style={styles.citizenActionsCard}>
           <Text style={[styles.sectionTitle, { fontSize: 15 * fontScale }]}>
-            {language === 'hi' ? 'नागरिक कार्रवाई' : 'Citizen Actions'}
+            Citizen Actions
           </Text>
 
           <View style={styles.actionButtonsCol}>
-            {/* Request Update */}
+            
             <Button
-              title={language === 'hi' ? 'अधिकारियों से अपडेट का अनुरोध करें' : 'Request Status Update'}
+              title="Request Status Update"
               onPress={() => requestReportUpdate(report.id)}
               variant="outline"
               size="md"
               icon={<RefreshCw size={16} color={SamadhanColors.primary} />}
             />
 
-            {/* Add Additional Info */}
+            
             <Button
-              title={language === 'hi' ? 'अतिरिक्त जानकारी जोड़ें' : 'Add Additional Information'}
+              title="Add Additional Information"
               onPress={() =>
                 showToast(
-                  language === 'hi'
-                    ? 'अतिरिक्त जानकारी प्रविष्टि बॉक्स सक्रिय।'
-                    : 'Additional information field active.',
+                  'Additional information field active.',
                   'info'
                 )
               }
@@ -395,14 +381,12 @@ export default function ReportDetailScreen() {
               style={{ marginTop: Spacing.sm }}
             />
 
-            {/* Report a Concern */}
+            
             <Button
-              title={language === 'hi' ? 'गलत सूचना या चिंता दर्ज करें' : 'Report Concern or Duplicate'}
+              title="Report Concern or Duplicate"
               onPress={() =>
                 showToast(
-                  language === 'hi'
-                    ? 'आपकी चिंता मॉडरेटर को भेज दी गई है।'
-                    : 'Concern flagged for community moderator review.',
+                  'Concern flagged for community moderator review.',
                   'info'
                 )
               }
@@ -414,10 +398,10 @@ export default function ReportDetailScreen() {
           </View>
         </View>
 
-        {/* Moderated Community Comments */}
+        
         <View style={styles.commentsSection}>
           <Text style={[styles.sectionTitle, { fontSize: 15 * fontScale }]}>
-            {language === 'hi' ? 'आधिकारिक एवं नागरिक टिप्पणियां' : 'Official & Citizen Updates'} (
+            Official & Citizen Updates (
             {report.moderatedComments ? report.moderatedComments.length : 0})
           </Text>
 
@@ -436,22 +420,18 @@ export default function ReportDetailScreen() {
             ))
           ) : (
             <Text style={styles.noCommentsText}>
-              {language === 'hi'
-                ? 'अभी तक कोई टिप्पणी नहीं है। पहली टिप्पणी जोड़ें।'
-                : 'No comments yet. Community and official notes appear here.'}
+              {'No comments yet. Community and official notes appear here.'}
             </Text>
           )}
 
-          {/* Add Comment Input Bar */}
+          
           <View style={styles.commentInputRow}>
             <TextInput
               accessibilityLabel="Add comment to report"
               value={commentText}
               onChangeText={setCommentText}
               placeholder={
-                language === 'hi'
-                  ? 'टिप्पणी या स्थिति प्रश्न लिखें...'
-                  : 'Add a community update or inquiry...'
+                'Add a community update or inquiry...'
               }
               placeholderTextColor={SamadhanColors.textMuted}
               style={styles.commentInput}

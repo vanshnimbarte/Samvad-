@@ -41,7 +41,7 @@ export function ReportCard({ report }: ReportCardProps) {
         Shadows.sm,
         pressed && styles.cardPressed,
       ]}>
-      {/* Top Row: Category Chip & Status Badge */}
+      
       <View style={styles.topRow}>
         <View style={[styles.categoryChip, { backgroundColor: category.badgeBg }]}>
           <Text style={[styles.categoryText, { color: category.color }]}>
@@ -52,7 +52,7 @@ export function ReportCard({ report }: ReportCardProps) {
         <StatusBadge status={report.status} size="sm" />
       </View>
 
-      {/* Main Info Row with optional Thumbnail */}
+      
       <View style={styles.bodyRow}>
         <View style={styles.textCol}>
           <Text
@@ -61,7 +61,7 @@ export function ReportCard({ report }: ReportCardProps) {
             {title}
           </Text>
 
-          {/* Location */}
+          
           <View style={styles.metaRow}>
             <MapPin size={13} color={SamadhanColors.action} />
             <Text style={styles.metaText} numberOfLines={1}>
@@ -69,7 +69,7 @@ export function ReportCard({ report }: ReportCardProps) {
             </Text>
           </View>
 
-          {/* Date & Supporters */}
+          
           <View style={styles.subMetaRow}>
             <View style={styles.metaItem}>
               <Calendar size={12} color={SamadhanColors.textMuted} />
@@ -79,7 +79,7 @@ export function ReportCard({ report }: ReportCardProps) {
             <View style={styles.metaItem}>
               <ThumbsUp size={12} color={SamadhanColors.secondary} />
               <Text style={styles.subMetaText}>
-                {report.supporters} {language === 'hi' ? 'समर्थक' : 'supporters'}
+                {report.supporters} supporters
               </Text>
             </View>
           </View>
@@ -90,13 +90,12 @@ export function ReportCard({ report }: ReportCardProps) {
         )}
       </View>
 
-      {/* Footer: ID & Next Action Preview */}
       <View style={styles.footerRow}>
         <Text style={styles.reportIdText}>ID: #{report.id}</Text>
 
         <View style={styles.viewAction}>
           <Text style={styles.viewActionText}>
-            {language === 'hi' ? 'ट्रैक करें' : 'Track Details'}
+            Track Details
           </Text>
           <ArrowRight size={13} color={SamadhanColors.primary} />
         </View>
