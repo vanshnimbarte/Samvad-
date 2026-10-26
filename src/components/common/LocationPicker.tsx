@@ -18,6 +18,7 @@ import {
 import {
   JHARKHAND_LOCATIONS,
 } from '@/data/samadhan-mock-data';
+import { getDistrictCoordinates } from '@/data/jharkhand-geo';
 import { SamadhanColors, Spacing, Radius } from '@/constants/samadhan-theme';
 import { useApp } from '@/context/AppContext';
 
@@ -259,11 +260,14 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
                 accessibilityRole="button"
                 accessibilityLabel={`Select district ${d.district}`}
                 onPress={() => {
+                  const coords = getDistrictCoordinates(d.district);
                   onChange({
                     ...value,
                     district: d.district,
                     block: d.blocks[0].name,
                     villageOrWard: d.blocks[0].panchayatsOrWards[0],
+                    latitude: coords.latitude,
+                    longitude: coords.longitude,
                     isGps: false,
                   });
                 }}
