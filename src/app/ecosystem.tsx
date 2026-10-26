@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
-import { ScrollView, View, Text, StyleSheet, Pressable } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
 import { Header } from '@/components/common/Header';
+import { Radius, SamadhanColors, Shadows, Spacing } from '@/constants/samadhan-theme';
 import { useApp } from '@/context/AppContext';
-import { toHref } from '@/lib/routes';
-import { UNIVERSITIES_DATA } from '@/data/universities';
 import { INDUSTRY_PARTNERS_DATA } from '@/data/partners';
-import { SamadhanColors, Spacing, Radius, Shadows } from '@/constants/samadhan-theme';
+import { UNIVERSITIES_DATA } from '@/data/universities';
+import { toHref } from '@/lib/routes';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function EcosystemScreen() {
   const router = useRouter();

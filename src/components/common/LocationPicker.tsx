@@ -57,7 +57,9 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         showToast(
-          'Location permission was denied. Please select manually.',
+          language === 'hi'
+            ? 'जीपीएस अनुमति अस्वीकार कर दी गई।'
+            : 'Location permission was denied. Please select manually.',
           'error'
         );
         setMode('manual');
@@ -105,12 +107,13 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
       });
 
       showToast(
-        'Real GPS location captured!',
+        language === 'hi' ? 'वास्तविक जीपीएस स्थान प्राप्त हुआ!' : 'Real GPS location captured!',
         'success'
       );
       setMode('gps');
     } catch (err: any) {
       console.warn('GPS capture error:', err);
+      // Fallback
       onChange({
         district: 'Ranchi',
         block: 'Ormanjhi',
@@ -122,7 +125,9 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
         isGps: true,
       });
       showToast(
-        'Could not access GPS hardware: using default area.',
+        language === 'hi'
+          ? 'जीपीएस त्रुटि: डिफ़ॉल्ट स्थान उपयोग किया गया।'
+          : 'Could not access GPS hardware: using default area.',
         'info'
       );
       setMode('gps');
@@ -133,7 +138,7 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
 
   return (
     <View style={styles.container}>
-      
+      {/* Selector: GPS vs Manual */}
       <View style={styles.tabToggleRow}>
         <Pressable
           accessibilityRole="button"
@@ -149,7 +154,7 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
               styles.tabButtonText,
               mode === 'gps' && styles.tabButtonTextActive,
             ]}>
-            Use Current GPS
+            {language === 'hi' ? 'जीपीएस द्वारा स्थान' : 'Use Current GPS'}
           </Text>
         </Pressable>
 
@@ -167,11 +172,12 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
               styles.tabButtonText,
               mode === 'manual' && styles.tabButtonTextActive,
             ]}>
-            Enter Manually
+            {language === 'hi' ? 'मैन्युअल प्रविष्टि' : 'Enter Manually'}
           </Text>
         </Pressable>
       </View>
 
+      {/* GPS Detection Card */}
       {mode === 'gps' ? (
         <View style={styles.gpsCard}>
           <View style={styles.gpsHeader}>
@@ -181,12 +187,20 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
             <View style={{ flex: 1 }}>
               <Text style={[styles.gpsTitle, { fontSize: 14 * fontScale }]}>
                 {detectingGps
-                  ? 'Acquiring satellite signal...'
+                  ? language === 'hi'
+                    ? 'जीपीएस सिग्नल प्राप्त हो रहा है...'
+                    : 'Acquiring satellite signal...'
+                  : language === 'hi'
+                  ? 'सटीक स्थान प्राप्त'
                   : 'Location Detected via GPS'}
               </Text>
               <Text style={styles.gpsAccuracy}>
                 {detectingGps
-                  ? 'Calculating accuracy radius...'
+                  ? language === 'hi'
+                    ? 'सटीकता जांची जा रही है...'
+                    : 'Calculating accuracy radius...'
+                  : language === 'hi'
+                  ? `✓ सटीकता: ${value.accuracyMeters || 6} मीटर के भीतर`
                   : `✓ Accurate to ~${value.accuracyMeters || 6} meters`}
               </Text>
             </View>
@@ -204,6 +218,7 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
             </Pressable>
           </View>
 
+          {/* Map Preview Graphic */}
           <View style={styles.mapPreviewGraphic}>
             <View style={styles.mockRoadH} />
             <View style={styles.mockRoadV} />
@@ -221,7 +236,7 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
 
           <View style={styles.detectedDetailsBox}>
             <Text style={styles.detectedLabel}>
-              Identified Location:
+              {language === 'hi' ? 'पहचाना गया क्षेत्र:' : 'Identified Location:'}
             </Text>
             <Text style={styles.detectedValue}>
               {value.villageOrWard}, {value.block}, {value.district}
@@ -232,9 +247,11 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
           </View>
         </View>
       ) : (
+        /* Manual Selection Form */
         <View style={styles.manualForm}>
+          {/* District Selector */}
           <Text style={styles.fieldLabel}>
-            District *
+            {language === 'hi' ? 'ज़िला (District)' : 'District'} *
           </Text>
           <View style={styles.chipRow}>
             {JHARKHAND_LOCATIONS.map((d) => (
@@ -269,8 +286,9 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
             ))}
           </View>
 
+          {/* Block Selector */}
           <Text style={[styles.fieldLabel, { marginTop: Spacing.md }]}>
-            Block / Tehsil *
+            {language === 'hi' ? 'प्रखंड (Block)' : 'Block / Tehsil'} *
           </Text>
           <View style={styles.chipRow}>
             {currentDistrictData.blocks.map((b) => (
@@ -301,8 +319,9 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
             ))}
           </View>
 
+          {/* Panchayat / Ward Selector */}
           <Text style={[styles.fieldLabel, { marginTop: Spacing.md }]}>
-            Panchayat / Ward *
+            {language === 'hi' ? 'पंचायत / वार्ड (Panchayat / Ward)' : 'Panchayat / Ward'} *
           </Text>
           <View style={styles.chipRow}>
             {currentBlockData.panchayatsOrWards.map((pw) => (
@@ -334,24 +353,34 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
         </View>
       )}
 
+      {/* Street / Landmark Address Input (Always visible) */}
       <View style={styles.addressSection}>
         <Text style={styles.fieldLabel}>
-          Street Address or Nearest Landmark
+          {language === 'hi'
+            ? 'सटीक पता या निकटतम पहचान चिह्न (Landmark)'
+            : 'Street Address or Nearest Landmark'}
         </Text>
         <TextInput
           accessibilityLabel="Street Address or Landmark"
           value={value.address}
           onChangeText={(txt) => onChange({ ...value, address: txt })}
-          placeholder="e.g., Near Primary School, Main Road, opposite Post Office"
+          placeholder={
+            language === 'hi'
+              ? 'उदा. राजकीय मध्य विद्यालय के पास, मुख्य सड़क'
+              : 'e.g., Near Primary School, Main Road, opposite Post Office'
+          }
           placeholderTextColor={SamadhanColors.textMuted}
           style={styles.addressInput}
         />
       </View>
 
+      {/* Permission Explanation Note */}
       <View style={styles.permissionNote}>
         <Info size={14} color={SamadhanColors.primary} />
         <Text style={styles.permissionText}>
-          Exact location enables engineering and municipal teams to dispatch relief accurately.
+          {language === 'hi'
+            ? 'सटीक स्थान से राहत दल एवं संबंधित विभाग तुरंत समस्या स्थल तक पहुंच सकते हैं।'
+            : 'Exact location enables engineering and municipal teams to dispatch relief accurately.'}
         </Text>
       </View>
     </View>

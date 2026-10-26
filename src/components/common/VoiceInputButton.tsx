@@ -25,7 +25,7 @@ export function VoiceInputButton({ onTranscriptionAvailable }: VoiceInputButtonP
   const [recordSeconds, setRecordSeconds] = useState(0);
   const [playSeconds, setPlaySeconds] = useState(0);
 
-
+  // Timer for recording
   useEffect(() => {
     let interval: any;
     if (isRecording) {
@@ -36,7 +36,7 @@ export function VoiceInputButton({ onTranscriptionAvailable }: VoiceInputButtonP
     return () => clearInterval(interval);
   }, [isRecording]);
 
-
+  // Timer for playback
   useEffect(() => {
     let interval: any;
     if (isPlaying) {
@@ -64,8 +64,11 @@ export function VoiceInputButton({ onTranscriptionAvailable }: VoiceInputButtonP
     setHasRecording(true);
     setPlaySeconds(0);
 
+    // Provide automatic simulated transcription
     const sampleVoiceTranscription =
-      'The handpump in front of our village primary school has been broken for 15 days. Sand and dirty water are coming out, and students must walk far for drinking water.';
+      language === 'hi'
+        ? 'हमारे गांव के प्राथमिक विद्यालय के सामने का हैंडपंप पिछले 15 दिनों से खराब है। नल से गंदा बालू वाला पानी आ रहा है और बच्चों को पीने के पानी के लिए दूर जाना पड़ रहा है।'
+        : 'The handpump in front of our village primary school has been broken for 15 days. Sand and dirty water are coming out, and students must walk far for drinking water.';
 
     onTranscriptionAvailable(sampleVoiceTranscription);
   };
@@ -100,15 +103,18 @@ export function VoiceInputButton({ onTranscriptionAvailable }: VoiceInputButtonP
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[styles.ctaTitle, { fontSize: 13 * fontScale }]}>
-              Speak to Describe (Voice Input)
+              {language === 'hi' ? 'बोलकर दर्ज करें (आवाज़ रिकॉर्डिंग)' : 'Speak to Describe (Voice Input)'}
             </Text>
             <Text style={styles.ctaSubtitle}>
-              Tap to record your issue in English
+              {language === 'hi'
+                ? 'माइक दबाकर अपनी भाषा में समस्या बताएं'
+                : 'Tap to record your issue in Hindi or English'}
             </Text>
           </View>
         </Pressable>
       )}
 
+      {/* Recording State */}
       {isRecording && (
         <View style={styles.recordingCard}>
           <View style={styles.recordPulse}>
@@ -135,19 +141,22 @@ export function VoiceInputButton({ onTranscriptionAvailable }: VoiceInputButtonP
             style={styles.stopButton}>
             <Square size={16} color="#FFFFFF" fill="#FFFFFF" />
             <Text style={styles.stopText}>
-              Stop
+              {language === 'hi' ? 'रोकें' : 'Stop'}
             </Text>
           </Pressable>
         </View>
       )}
 
+      {/* Recorded & Playback State */}
       {hasRecording && (
         <View style={styles.recordedCard}>
           <View style={styles.recordedTop}>
             <View style={styles.voiceSuccessRow}>
               <CheckCircle size={16} color={SamadhanColors.secondary} />
               <Text style={styles.voiceRecordedLabel}>
-                Voice Recorded ({formatTime(recordSeconds)})
+                {language === 'hi'
+                  ? `आवाज़ रिकॉर्ड हुई (${formatTime(recordSeconds)})`
+                  : `Voice Recorded (${formatTime(recordSeconds)})`}
               </Text>
             </View>
 
@@ -160,6 +169,7 @@ export function VoiceInputButton({ onTranscriptionAvailable }: VoiceInputButtonP
             </Pressable>
           </View>
 
+          {/* Audio Player Bar */}
           <View style={styles.playerBar}>
             <Pressable
               accessibilityRole="button"
@@ -192,7 +202,9 @@ export function VoiceInputButton({ onTranscriptionAvailable }: VoiceInputButtonP
           </View>
 
           <Text style={styles.transcriptionNotice}>
-            ✓ Voice transcription has been automatically populated in the description.
+            {language === 'hi'
+              ? '✓ आपकी आवाज़ से विवरण बॉक्स में पाठ स्वतः जोड़ दिया गया है।'
+              : '✓ Voice transcription has been automatically populated in the description.'}
           </Text>
         </View>
       )}

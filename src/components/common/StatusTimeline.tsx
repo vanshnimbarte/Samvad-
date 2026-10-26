@@ -71,7 +71,7 @@ export function StatusTimeline({
   return (
     <View style={styles.container}>
       <Text style={[styles.sectionTitle, { fontSize: 16 * fontScale }]}>
-        Resolution Progress Timeline (7 Stages)
+        {language === 'hi' ? 'समाधान प्रगति समयरेखा (7 चरण)' : 'Resolution Progress Timeline (7 Stages)'}
       </Text>
 
       <View style={styles.timelineList}>
@@ -82,16 +82,21 @@ export function StatusTimeline({
           const isUpcoming = idx > currentIndex;
 
           const matchedEvent = timelineEvents.find((e) => e.status === step);
-          const timestamp = matchedEvent ? matchedEvent.timestamp : 'Upcoming';
+          const timestamp = matchedEvent ? matchedEvent.timestamp : language === 'hi' ? 'आगामी' : 'Upcoming';
           const explanation =
             matchedEvent
-              ? matchedEvent.descriptionEn
+              ? language === 'hi'
+                ? matchedEvent.descriptionHi
+                : matchedEvent.descriptionEn
+              : language === 'hi'
+              ? config.explanationHi
               : config.explanationEn;
 
           const isLast = idx === STATUS_STEPS.length - 1;
 
           return (
             <View key={step} style={styles.timelineRow}>
+              {/* Left Column: Line & Circle Indicator */}
               <View style={styles.indicatorCol}>
                 <View
                   style={[
@@ -123,6 +128,7 @@ export function StatusTimeline({
                 )}
               </View>
 
+              {/* Right Column: Stage Details */}
               <View
                 style={[
                   styles.contentCard,
@@ -141,7 +147,7 @@ export function StatusTimeline({
                         isCurrent && { color: config.color, fontWeight: '800' },
                         isUpcoming && { color: SamadhanColors.textMuted },
                       ]}>
-                      {config.labelEn}
+                      {language === 'hi' ? config.labelHi : config.labelEn}
                     </Text>
 
                     {isCurrent && (
@@ -151,7 +157,7 @@ export function StatusTimeline({
                           { backgroundColor: config.color },
                         ]}>
                         <Text style={styles.currentPillText}>
-                          ACTIVE
+                          {language === 'hi' ? 'सक्रिय' : 'ACTIVE'}
                         </Text>
                       </View>
                     )}
@@ -172,6 +178,7 @@ export function StatusTimeline({
                   {explanation}
                 </Text>
 
+                {/* Show Responsible Org during Assigned / In Progress */}
                 {isCurrent && (step === 'Assigned' || step === 'In Progress') && responsibleOrg && (
                   <View style={styles.orgBox}>
                     <Building size={13} color={SamadhanColors.primary} />
@@ -182,18 +189,20 @@ export function StatusTimeline({
                   </View>
                 )}
 
+                {/* Show Next Expected Action on Active Card */}
                 {isCurrent && nextExpectedAction && (
                   <View style={styles.nextActionBox}>
                     <ArrowRightCircle size={14} color={SamadhanColors.action} />
                     <View style={{ flex: 1 }}>
                       <Text style={styles.nextActionLabel}>
-                        Next Expected Action:
+                        {language === 'hi' ? 'अगली अपेक्षित कार्रवाई:' : 'Next Expected Action:'}
                       </Text>
                       <Text style={styles.nextActionText}>
-                        {nextExpectedAction.labelEn}
+                        {language === 'hi' ? nextExpectedAction.labelHi : nextExpectedAction.labelEn}
                       </Text>
                       <Text style={styles.targetDateText}>
-                        Target: {nextExpectedAction.estimatedDate}
+                        {language === 'hi' ? 'लक्षित समय: ' : 'Target: '}
+                        {nextExpectedAction.estimatedDate}
                       </Text>
                     </View>
                   </View>

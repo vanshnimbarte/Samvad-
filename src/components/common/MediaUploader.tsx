@@ -47,7 +47,9 @@ export function MediaUploader({ mediaList, onChange, onSkip }: MediaUploaderProp
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
         showToast(
-          'Camera permission is required to take photos.',
+          language === 'hi'
+            ? 'कैमरा अनुमति आवश्यक है।'
+            : 'Camera permission is required to take photos.',
           'error'
         );
         return;
@@ -78,7 +80,7 @@ export function MediaUploader({ mediaList, onChange, onSkip }: MediaUploaderProp
           setCompressing(false);
           setCompressingFileName('');
           showToast(
-            'Photo attached successfully.',
+            language === 'hi' ? 'फोटो सफलतापूर्वक संलग्न की गई।' : 'Photo attached successfully.',
             'success'
           );
         }, 500);
@@ -117,7 +119,7 @@ export function MediaUploader({ mediaList, onChange, onSkip }: MediaUploaderProp
           setCompressing(false);
           setCompressingFileName('');
           showToast(
-            'Gallery photo attached.',
+            language === 'hi' ? 'गैलरी फोटो संलग्न की गई।' : 'Gallery photo attached.',
             'success'
           );
         }, 500);
@@ -133,7 +135,7 @@ export function MediaUploader({ mediaList, onChange, onSkip }: MediaUploaderProp
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
         showToast(
-          'Camera permission required.',
+          language === 'hi' ? 'कैमरा अनुमति आवश्यक है।' : 'Camera permission required.',
           'error'
         );
         return;
@@ -157,7 +159,7 @@ export function MediaUploader({ mediaList, onChange, onSkip }: MediaUploaderProp
         };
         onChange([...mediaList, newItem]);
         showToast(
-          'Video recorded and attached.',
+          language === 'hi' ? 'वीडियो संलग्न किया गया।' : 'Video recorded and attached.',
           'success'
         );
       }
@@ -205,17 +207,19 @@ export function MediaUploader({ mediaList, onChange, onSkip }: MediaUploaderProp
 
   return (
     <View style={styles.container}>
-      
+      {/* Low-Bandwidth / Data-Saving Banner */}
       <View style={styles.compressionBanner}>
         <Zap size={15} color={SamadhanColors.secondaryDark} />
         <Text style={[styles.bannerText, { fontSize: 12 * fontScale }]}>
-Smart Data-Saver: Photos are compressed by ~80% to under 500 KB for rural 2G/3G.
+          {language === 'hi'
+            ? 'स्मार्ट डेटा बचत: फोटो 80% स्वतः कंप्रेस होकर 500 KB से कम में अपलोड होगी।'
+            : 'Smart Data-Saver: Photos are compressed by ~80% to <500 KB for rural 2G/3G.'}
         </Text>
       </View>
 
-      
+      {/* Action Buttons Grid */}
       <View style={styles.actionsGrid}>
-        
+        {/* Take Photo */}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Take Photo with Camera"
@@ -225,14 +229,14 @@ Smart Data-Saver: Photos are compressed by ~80% to under 500 KB for rural 2G/3G.
             <Camera size={22} color={SamadhanColors.primary} />
           </View>
           <Text style={[styles.actionLabel, { fontSize: 12 * fontScale }]}>
-            Take Photo
+            {language === 'hi' ? 'कैमरा से फोटो' : 'Take Photo'}
           </Text>
           <Text style={styles.actionSubtext}>
-            Auto-compressed
+            {language === 'hi' ? 'लाइव फोटो लें' : 'Auto-compressed'}
           </Text>
         </Pressable>
 
-        
+        {/* Record Video */}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Record Short Video"
@@ -242,14 +246,14 @@ Smart Data-Saver: Photos are compressed by ~80% to under 500 KB for rural 2G/3G.
             <Video size={22} color={SamadhanColors.action} />
           </View>
           <Text style={[styles.actionLabel, { fontSize: 12 * fontScale }]}>
-            Record Video
+            {language === 'hi' ? 'छोटा वीडियो' : 'Record Video'}
           </Text>
           <Text style={styles.actionSubtext}>
-            Max 30s limit
+            {language === 'hi' ? 'अधिकतम 30 सेकंड' : 'Max 30s limit'}
           </Text>
         </Pressable>
 
-        
+        {/* Gallery */}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Choose from Device Gallery"
@@ -259,14 +263,14 @@ Smart Data-Saver: Photos are compressed by ~80% to under 500 KB for rural 2G/3G.
             <ImageIcon size={22} color="#16A34A" />
           </View>
           <Text style={[styles.actionLabel, { fontSize: 12 * fontScale }]}>
-            Device Gallery
+            {language === 'hi' ? 'गैलरी से चुनें' : 'Device Gallery'}
           </Text>
           <Text style={styles.actionSubtext}>
-            Select images
+            {language === 'hi' ? 'मौजूदा फोटो' : 'Select images'}
           </Text>
         </Pressable>
 
-        
+        {/* Add Document */}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Attach Document or Letter"
@@ -276,34 +280,38 @@ Smart Data-Saver: Photos are compressed by ~80% to under 500 KB for rural 2G/3G.
             <FileText size={22} color="#7C3AED" />
           </View>
           <Text style={[styles.actionLabel, { fontSize: 12 * fontScale }]}>
-            Add Document
+            {language === 'hi' ? 'दस्तावेज़ जोड़ें' : 'Add Document'}
           </Text>
           <Text style={styles.actionSubtext}>
-            PDF / Application
+            {language === 'hi' ? 'आवेदन या पर्ची' : 'PDF / Application'}
           </Text>
         </Pressable>
       </View>
 
-      
+      {/* Compression Progress Indicator */}
       {compressing && (
         <View style={styles.compressingBox}>
           <ActivityIndicator size="small" color={SamadhanColors.secondary} />
           <View style={{ flex: 1 }}>
             <Text style={styles.compressingText}>
-              {`Compressing file for slow network: ${compressingFileName}`}
+              {language === 'hi'
+                ? `फ़ाइल ऑप्टिमाइज़ हो रही है: ${compressingFileName}`
+                : `Compressing file for slow network: ${compressingFileName}`}
             </Text>
             <Text style={styles.compressingSub}>
-              {'Reducing size from 3.8 MB to ~500 KB...'}
+              {language === 'hi'
+                ? 'गुणवत्ता बनाए रखते हुए आकार 80% घटाया जा रहा है...'
+                : 'Reducing size from 3.8 MB to ~500 KB...'}
             </Text>
           </View>
         </View>
       )}
 
-      
+      {/* Media Previews List */}
       {mediaList.length > 0 && (
         <View style={styles.previewSection}>
           <Text style={[styles.previewHeading, { fontSize: 13 * fontScale }]}>
-            Attached Evidence ({mediaList.length})
+            {language === 'hi' ? 'संलग्न साक्ष्य' : 'Attached Evidence'} ({mediaList.length})
           </Text>
 
           {mediaList.map((item) => (
@@ -338,7 +346,7 @@ Smart Data-Saver: Photos are compressed by ~80% to under 500 KB for rural 2G/3G.
         </View>
       )}
 
-      
+      {/* Skip Option */}
       {mediaList.length === 0 && onSkip && (
         <Pressable
           accessibilityRole="button"
@@ -346,7 +354,9 @@ Smart Data-Saver: Photos are compressed by ~80% to under 500 KB for rural 2G/3G.
           onPress={onSkip}
           style={styles.skipButton}>
           <Text style={styles.skipText}>
-            Don't have media? Skip this step
+            {language === 'hi'
+              ? 'फोटो या वीडियो नहीं है? इस चरण को छोड़ें'
+              : "Don't have media? Skip this step"}
           </Text>
         </Pressable>
       )}

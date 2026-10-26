@@ -29,14 +29,14 @@ export function OfflineBanner() {
   const isSlow = networkStatus === 'slow';
   const isSyncing = networkStatus === 'syncing';
 
-
+  // Only show banner if there is an active offline/slow/sync state or user toggled simulator
   if (!isOffline && !isSlow && !isSyncing && !showSimulator) {
     return null;
   }
 
   return (
     <View style={styles.wrapper}>
-      
+      {/* Active Status Alert (when not online or syncing) */}
       {(isOffline || isSlow || isSyncing) && (
         <View
           style={[
@@ -57,21 +57,36 @@ export function OfflineBanner() {
             <View style={{ flex: 1 }}>
               <Text style={[styles.bannerTitle, { fontSize: 13 * fontScale }]}>
                 {isOffline
-                  ? 'You are offline'
+                  ? language === 'hi'
+                    ? 'आप ऑफ़लाइन हैं'
+                    : 'You are offline'
                   : isSlow
-                  ? 'Slow or unstable connection'
+                  ? language === 'hi'
+                    ? 'धीमा इंटरनेट कनेक्शन'
+                    : 'Slow or unstable connection'
+                  : language === 'hi'
+                  ? 'सर्वर से सिंक हो रहा है...'
                   : 'Syncing drafts with server...'}
               </Text>
 
               <Text style={styles.bannerMessage}>
                 {isOffline
-                  ? 'Your saved drafts will sync automatically when connection returns.'
+                  ? language === 'hi'
+                    ? 'आपके सहेजे गए ड्राफ्ट इंटरनेट लौटने पर अपने-आप सिंक होंगे।'
+                    : 'Your saved drafts will sync automatically when connection returns.'
                   : isSlow
-                  ? 'Data-saving mode active. Media compressed for 2G/3G.'
-                  : `${drafts.length} report(s) syncing to state registry...`}
+                  ? language === 'hi'
+                    ? 'डेटा-बचत मोड सक्रिय है (कम बैंडविड्थ पर छवियां संकुचित हैं)।'
+                    : 'Data-saving mode active. Media compressed for 2G/3G.'
+                  : `${drafts.length} ${
+                      language === 'hi'
+                        ? 'ड्राफ्ट सर्वर में भेजे जा रहे हैं...'
+                        : 'report(s) syncing to state registry...'
+                    }`}
               </Text>
             </View>
 
+            {/* Sync Now Action */}
             {drafts.length > 0 && !isOffline && (
               <Pressable
                 accessibilityRole="button"
@@ -80,7 +95,7 @@ export function OfflineBanner() {
                 style={styles.syncBtn}>
                 <RefreshCw size={13} color="#FFFFFF" />
                 <Text style={styles.syncBtnText}>
-                  Sync
+                  {language === 'hi' ? 'सिंक करें' : 'Sync'}
                 </Text>
               </Pressable>
             )}
@@ -88,7 +103,7 @@ export function OfflineBanner() {
         </View>
       )}
 
-      
+      {/* Network Simulator Quick Control when toggled */}
       {showSimulator && (
         <View style={styles.simulatorBar}>
           <View style={styles.simulatorOptionsRow}>

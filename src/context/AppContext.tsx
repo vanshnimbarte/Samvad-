@@ -14,8 +14,6 @@ import {
   saveLocalUserProfile,
   getLocalUserProfile,
   clearLocalUserProfile,
-  saveRegisteredAccount,
-  findRegisteredAccount,
 } from '@/lib/supabase';
 import {
   loadSavedDrafts,
@@ -121,17 +119,7 @@ interface AppContextType {
     district?: string,
     block?: string
   ) => Promise<void>;
-  signInWithEmail: (
-    email: string,
-    password: string,
-    metadata?: {
-      fullName?: string;
-      role?: UserRole;
-      organization?: string;
-      district?: string;
-      block?: string;
-    }
-  ) => Promise<{ success: boolean; error?: string }>;
+  signInWithEmail: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signUpWithEmail: (
     email: string,
     password: string,
@@ -139,7 +127,6 @@ interface AppContextType {
       fullName: string;
       phone?: string;
       role: UserRole;
-      organization?: string;
       district?: string;
       block?: string;
     }
@@ -458,6 +445,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       return ROLE_PROFILES[role] || prev;
     });
+
+    if (session?.user?.id) {
+      supabase
+        .from('profiles')
+        .update({ role, updated_at: new Date().toISOString() })
+        .eq('id', session.user.id)
+        .then();
+    }
   };
   const [challenges, setChallenges] = useState<Challenge[]>(() => enrichChallenges(CHALLENGES_DATA));
 
@@ -566,9 +561,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const newReport: CivicReport = {
       id: newId,
       titleEn: reportData.titleEn || 'New Community Issue',
-      titleHi: reportData.titleEn || 'New Community Issue',
+      titleHi: reportData.titleHi || reportData.titleEn || 'नई सामुदायिक समस्या',
       descriptionEn: reportData.descriptionEn || '',
-      descriptionHi: reportData.descriptionEn || '',
+      descriptionHi: reportData.descriptionHi || reportData.descriptionEn || '',
       categoryId: reportData.categoryId || 'other',
       status: 'Received',
       urgency: reportData.urgency || 'medium',
@@ -597,12 +592,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           type: 'image',
           url: 'https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=800&q=80',
           captionEn: 'Attached field photograph',
-          captionHi: 'Attached field photograph',
+          captionHi: 'संलग्न स्थल फोटोग्राफ',
         },
       ],
       nextExpectedAction: {
         labelEn: 'Community coordinator validation within 24-48 hours',
-        labelHi: 'Community coordinator validation within 24-48 hours',
+        labelHi: '24-48 घंटे के भीतर सामुदायिक समन्वयक द्वारा सत्यापन',
         estimatedDate: 'Tomorrow, 05:00 PM',
       },
       timeline: [
@@ -610,9 +605,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           status: 'Received',
           timestamp: 'Just now',
           titleEn: 'Report Lodged Successfully',
-          titleHi: 'Report Lodged Successfully',
+          titleHi: 'रिपोर्ट सफलतापूर्वक दर्ज हुई',
           descriptionEn: 'Your grievance has been logged and assigned tracking ID.',
-          descriptionHi: 'Your grievance has been logged and assigned tracking ID.',
+          descriptionHi: 'आपकी शिकायत दर्ज कर ली गई है और ट्रैकिंग आईडी प्रदान की गई है।',
           actor: user.name || 'Citizen',
           completed: true,
           current: true,
@@ -621,9 +616,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           status: 'Validated',
           timestamp: 'Upcoming (24h)',
           titleEn: 'Coordination Check',
-          titleHi: 'Coordination Check',
+          titleHi: 'समन्वयक सत्यापन',
           descriptionEn: 'Local coordinator will inspect site details.',
-          descriptionHi: 'Local coordinator will inspect site details.',
+          descriptionHi: 'स्थानीय समन्वयक स्थल का निरीक्षण करेंगे।',
           actor: 'Block Coordinator',
           completed: false,
         },
@@ -631,9 +626,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           status: 'Assigned',
           timestamp: 'Upcoming',
           titleEn: 'Routing to Nodal Agency',
-          titleHi: 'Routing to Nodal Agency',
+          titleHi: 'नोडल एजेंसी को प्रेषण',
           descriptionEn: 'Report forwarded to line department.',
-          descriptionHi: 'Report forwarded to line department.',
+          descriptionHi: 'संबंधित सरकारी विभाग को भेजा जाएगा।',
           actor: 'District Administration',
           completed: false,
         },
@@ -641,9 +636,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           status: 'In Progress',
           timestamp: 'Upcoming',
           titleEn: 'Remedial Action Started',
-          titleHi: 'Remedial Action Started',
+          titleHi: 'निवारक कार्य आरंभ',
           descriptionEn: 'Field team commences work on ground.',
-          descriptionHi: 'Field team commences work on ground.',
+          descriptionHi: 'ज़मीनी स्तर पर कार्य शुरू होगा।',
           actor: 'Field Operations Team',
           completed: false,
         },
@@ -651,9 +646,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           status: 'Pilot',
           timestamp: 'Upcoming',
           titleEn: 'Community Trial',
-          titleHi: 'Community Trial',
+          titleHi: 'सामुदायिक परीक्षण',
           descriptionEn: 'Testing solution with affected citizens.',
-          descriptionHi: 'Testing solution with affected citizens.',
+          descriptionHi: 'प्रभावित नागरिकों के साथ समाधान का परीक्षण।',
           actor: 'User Committee',
           completed: false,
         },
@@ -661,9 +656,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           status: 'Deployed',
           timestamp: 'Upcoming',
           titleEn: 'Permanent Implementation',
-          titleHi: 'Permanent Implementation',
+          titleHi: 'स्थायी समाधान लागू',
           descriptionEn: 'Solution fully operational on site.',
-          descriptionHi: 'Solution fully operational on site.',
+          descriptionHi: 'स्थल पर समाधान पूर्ण रूप से क्रियाशील।',
           actor: 'Implementing Agency',
           completed: false,
         },
@@ -671,9 +666,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           status: 'Closed',
           timestamp: 'Upcoming',
           titleEn: 'Citizen Confirmation & Close',
-          titleHi: 'Citizen Confirmation & Close',
+          titleHi: 'नागरिक संतुष्टि पश्चात केस बंद',
           descriptionEn: 'Verified by citizen reporter.',
-          descriptionHi: 'Verified by citizen reporter.',
+          descriptionHi: 'रिपोर्टर की संतुष्टि पर क्लोजर।',
           actor: 'Samadhan Community Lead',
           completed: false,
         },
@@ -683,16 +678,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     setReports((prev) => [newReport, ...prev]);
 
+
     insertReportToSupabase(newReport, session?.user?.id);
+
 
     const newNotif: CivicNotification = {
       id: `n-${Date.now()}`,
       type: 'report_received',
       reportId: newId,
       titleEn: `Report Logged (#${newId})`,
-      titleHi: `Report Logged (#${newId})`,
+      titleHi: `रिपोर्ट दर्ज हुई (#${newId})`,
       messageEn: `Your report has been received and scheduled for validation.`,
-      messageHi: `Your report has been received and scheduled for validation.`,
+      messageHi: `आपकी रिपोर्ट प्राप्त हो गई है और सत्यापन हेतु निर्धारित है।`,
       timestamp: 'Just now',
       isRead: false,
       actionRoute: `/report-detail?id=${newId}`,
@@ -1211,79 +1208,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithEmail = async (
     email: string,
-    password: string,
-    metadata?: {
-      fullName?: string;
-      role?: UserRole;
-      organization?: string;
-      district?: string;
-      block?: string;
-    }
+    password: string
   ): Promise<{ success: boolean; error?: string }> => {
     try {
       const cleanEmail = email.trim();
-      const cleanPassword = password.trim();
-      const targetRole = metadata?.role || userRole || 'citizen';
-      const fallbackName = metadata?.fullName?.trim() || cleanEmail.split('@')[0] || 'User';
-      const targetOrg =
-        metadata?.organization ||
-        (targetRole === 'university'
-          ? 'Faculty / Student'
-          : targetRole === 'industry'
-          ? 'CSR Lead'
-          : targetRole === 'government'
-          ? 'District Nodal Officer'
-          : 'Citizen Member');
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password,
+      });
 
-      let authenticatedWithCloud = false;
-
-      try {
-        const { data } = await supabase.auth.signInWithPassword({
-          email: cleanEmail,
-          password: cleanPassword,
-        });
-
-        if (data?.session && data?.user) {
-          setSession(data.session);
-          await syncUserFromSupabase(data.user);
-          authenticatedWithCloud = true;
-        }
-      } catch (_) {}
-
-      if (!authenticatedWithCloud) {
-        const registered = await findRegisteredAccount(cleanEmail);
-        const resolvedName = registered?.fullName || fallbackName;
-        const resolvedRole = (registered?.role || targetRole) as UserRole;
-        const resolvedOrg = registered?.organization || targetOrg;
-        const resolvedDistrict = registered?.district || metadata?.district || 'Ranchi';
-        const resolvedBlock = registered?.block || metadata?.block || 'Ranchi Sadar';
-
-        const userObj: UserProfile = {
-          name: resolvedName,
-          phone: registered?.phone || '',
-          email: cleanEmail,
-          communityRole: resolvedOrg,
-          district: resolvedDistrict,
-          block: resolvedBlock,
-          isGuest: false,
-        };
-
-        setUser(userObj);
-        setUserRoleState(resolvedRole);
-        await saveLocalUserProfile(userObj, resolvedRole);
-        await saveRegisteredAccount({
-          email: cleanEmail,
-          password: cleanPassword,
-          fullName: resolvedName,
-          role: resolvedRole,
-          organization: resolvedOrg,
-          district: resolvedDistrict,
-          block: resolvedBlock,
-        });
+      if (data?.session && data?.user) {
+        setSession(data.session);
+        await syncUserFromSupabase(data.user);
+        showToast('Logged in successfully!', 'success');
+        return { success: true };
       }
 
-      showToast(`Welcome! Logged in successfully.`, 'success');
-      return { success: true };
+      if (error) {
+        let msg = error.message;
+        if (msg.toLowerCase().includes('email not confirmed')) {
+          msg = 'Email unconfirmed. Please disable "Confirm email" in Supabase Dashboard (Auth > Providers > Email).';
+        }
+        showToast(msg, 'error');
+        return { success: false, error: msg };
+      }
+
+      return { success: false, error: 'Login session missing' };
     } catch (e: any) {
       const msg = e?.message || 'Login failed';
       showToast(msg, 'error');
@@ -1298,45 +1248,62 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       fullName: string;
       phone?: string;
       role: UserRole;
-      organization?: string;
       district?: string;
       block?: string;
     }
   ): Promise<{ success: boolean; requiresEmailConfirmation: boolean; error?: string }> => {
     try {
       const cleanEmail = email.trim();
-      const cleanPassword = password.trim();
       const role = metadata.role || 'citizen';
       const cleanName = metadata.fullName.trim();
+
+      const { data, error } = await supabase.auth.signUp({
+        email: cleanEmail,
+        password,
+        options: {
+          data: {
+            full_name: cleanName,
+            name: cleanName,
+            phone: metadata.phone || '',
+            role,
+            district: metadata.district || 'Ranchi',
+            block: metadata.block || 'Ranchi Sadar',
+          },
+        },
+      });
+
+      if (error) {
+        let msg = error.message;
+        if (msg.toLowerCase().includes('rate limit')) {
+          msg = 'Supabase email limit exceeded. Please disable "Confirm email" in Supabase Dashboard (Auth > Providers > Email).';
+        }
+        showToast(msg, 'error');
+        return { success: false, requiresEmailConfirmation: false, error: msg };
+      }
+
       const communityRole =
-        metadata.organization ||
-        (role === 'citizen'
+        role === 'citizen'
           ? 'Citizen Member'
           : role === 'university'
           ? 'Faculty / Student'
           : role === 'industry'
           ? 'CSR Lead'
-          : 'District Nodal Officer');
+          : 'District Nodal Officer';
 
-      try {
-        const { data } = await supabase.auth.signUp({
-          email: cleanEmail,
-          password: cleanPassword,
-          options: {
-            data: {
-              full_name: cleanName,
-              name: cleanName,
-              phone: metadata.phone || '',
-              role,
-              district: metadata.district || 'Ranchi',
-              block: metadata.block || 'Ranchi Sadar',
-            },
-          },
-        });
-        if (data?.session) {
-          setSession(data.session);
-        }
-      } catch (_) {}
+      if (data?.user?.id) {
+        try {
+          await supabase.from('profiles').upsert({
+            id: data.user.id,
+            email: cleanEmail,
+            full_name: cleanName,
+            phone: metadata.phone || '',
+            role,
+            district: metadata.district || 'Ranchi',
+            block: metadata.block || 'Ranchi Sadar',
+            community_role: communityRole,
+          });
+        } catch (_) {}
+      }
 
       const userObj: UserProfile = {
         name: cleanName,
@@ -1351,19 +1318,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setUser(userObj);
       setUserRoleState(role);
       await saveLocalUserProfile(userObj, role);
-      await saveRegisteredAccount({
-        email: cleanEmail,
-        password: cleanPassword,
-        fullName: cleanName,
-        phone: metadata.phone || '',
-        role,
-        organization: communityRole,
-        district: metadata.district || 'Ranchi',
-        block: metadata.block || 'Ranchi Sadar',
-      });
 
-      showToast(`Account created for ${cleanName}!`, 'success');
-      return { success: true, requiresEmailConfirmation: false };
+      if (data?.session) {
+        setSession(data.session);
+        showToast('Account created and logged in successfully!', 'success');
+        return { success: true, requiresEmailConfirmation: false };
+      }
+
+      showToast('Account registered! Please check email or disable Confirm email in Supabase.', 'info');
+      return { success: true, requiresEmailConfirmation: true };
     } catch (e: any) {
       const msg = e?.message || 'Registration failed';
       showToast(msg, 'error');
@@ -1399,14 +1362,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setUser(userObj);
     setUserRoleState(activeRole);
     await saveLocalUserProfile(userObj, activeRole);
-    await saveRegisteredAccount({
-      phone: cleanPhone,
-      fullName: cleanName,
-      role: activeRole,
-      organization: cleanOrg,
-      district: cleanDistrict,
-      block: cleanBlock,
-    });
     showToast(`Logged in as ${cleanName}!`, 'success');
   };
 
@@ -1439,6 +1394,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             district: profile.district,
             block: profile.block,
             community_role: profile.communityRole,
+            role: userRole,
           },
         });
 
@@ -1450,6 +1406,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             district: profile.district,
             block: profile.block,
             community_role: profile.communityRole,
+            role: userRole,
             updated_at: new Date().toISOString(),
           })
           .eq('id', session.user.id);
