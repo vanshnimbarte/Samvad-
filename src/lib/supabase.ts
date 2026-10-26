@@ -79,6 +79,7 @@ export interface SupabaseUserProfile {
 }
 
 const USER_SESSION_KEY = 'SAMVAD_SAVED_USER_SESSION_V2';
+const USERS_STORE_KEY = 'SAMVAD_REGISTERED_ACCOUNTS_V2';
 
 export async function saveLocalUserProfile(profile: any, role: string): Promise<void> {
   try {
@@ -105,6 +106,51 @@ export async function clearLocalUserProfile(): Promise<void> {
     await ExpoStorageAdapter.removeItem(USER_SESSION_KEY);
   } catch (err) {
     console.warn('Failed to clear local user profile:', err);
+  }
+}
+
+export async function saveRegisteredAccount(account: {
+  email?: string;
+  phone?: string;
+  password?: string;
+  fullName: string;
+  role: string;
+  district?: string;
+  block?: string;
+  organization?: string;
+}): Promise<void> {
+  try {
+    const raw = await ExpoStorageAdapter.getItem(USERS_STORE_KEY);
+    const list: any[] = raw ? JSON.parse(raw) : [];
+    const filtered = list.filter((a) => {
+      const matchEmail = account.email && a.email && a.email.toLowerCase() === account.email.toLowerCase();
+      const matchPhone = account.phone && a.phone && a.phone.replace(/\D/g, '') === account.phone.replace(/\D/g, '');
+      return !matchEmail && !matchPhone;
+    });
+    filtered.push(account);
+    await ExpoStorageAdapter.setItem(USERS_STORE_KEY, JSON.stringify(filtered));
+  } catch (err) {
+    console.warn('Failed to save registered account:', err);
+  }
+}
+
+export async function findRegisteredAccount(identifier: string): Promise<any | null> {
+  try {
+    const raw = await ExpoStorageAdapter.getItem(USERS_STORE_KEY);
+    if (!raw) return null;
+    const list: any[] = JSON.parse(raw);
+    const clean = identifier.trim().toLowerCase();
+    const cleanPhone = identifier.replace(/\D/g, '');
+    return (
+      list.find(
+        (a) =>
+          (a.email && a.email.toLowerCase() === clean) ||
+          (a.phone && a.phone.replace(/\D/g, '') === cleanPhone)
+      ) || null
+    );
+  } catch (err) {
+    console.warn('Failed to find registered account:', err);
+    return null;
   }
 }
 

@@ -14,6 +14,8 @@ import {
   saveLocalUserProfile,
   getLocalUserProfile,
   clearLocalUserProfile,
+  saveRegisteredAccount,
+  findRegisteredAccount,
 } from '@/lib/supabase';
 import {
   loadSavedDrafts,
@@ -119,7 +121,17 @@ interface AppContextType {
     district?: string,
     block?: string
   ) => Promise<void>;
-  signInWithEmail: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signInWithEmail: (
+    email: string,
+    password: string,
+    metadata?: {
+      fullName?: string;
+      role?: UserRole;
+      organization?: string;
+      district?: string;
+      block?: string;
+    }
+  ) => Promise<{ success: boolean; error?: string }>;
   signUpWithEmail: (
     email: string,
     password: string,
@@ -127,6 +139,7 @@ interface AppContextType {
       fullName: string;
       phone?: string;
       role: UserRole;
+      organization?: string;
       district?: string;
       block?: string;
     }
@@ -1200,52 +1213,79 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithEmail = async (
     email: string,
-    password: string
+    password: string,
+    metadata?: {
+      fullName?: string;
+      role?: UserRole;
+      organization?: string;
+      district?: string;
+      block?: string;
+    }
   ): Promise<{ success: boolean; error?: string }> => {
     try {
       const cleanEmail = email.trim();
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: cleanEmail,
-        password,
-      });
+      const cleanPassword = password.trim();
+      const targetRole = metadata?.role || userRole || 'citizen';
+      const fallbackName = metadata?.fullName?.trim() || cleanEmail.split('@')[0] || 'User';
+      const targetOrg =
+        metadata?.organization ||
+        (targetRole === 'university'
+          ? 'Faculty / Student'
+          : targetRole === 'industry'
+          ? 'CSR Lead'
+          : targetRole === 'government'
+          ? 'District Nodal Officer'
+          : 'Citizen Member');
 
-      if (data?.session && data?.user) {
-        setSession(data.session);
-        await syncUserFromSupabase(data.user);
-        showToast('Logged in successfully!', 'success');
-        return { success: true };
-      }
+      let authenticatedWithCloud = false;
 
-      const { data: profileRow } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('email', cleanEmail)
-        .maybeSingle();
-
-      if (profileRow) {
-        const role = (profileRow.role || 'citizen') as UserRole;
-        const userObj: UserProfile = {
-          name: profileRow.full_name || cleanEmail.split('@')[0],
-          phone: profileRow.phone || '',
+      try {
+        const { data } = await supabase.auth.signInWithPassword({
           email: cleanEmail,
-          communityRole: profileRow.community_role || (role === 'university' ? 'Faculty / Student' : 'Citizen Member'),
-          district: profileRow.district || 'Ranchi',
-          block: profileRow.block || 'Ranchi Sadar',
+          password: cleanPassword,
+        });
+
+        if (data?.session && data?.user) {
+          setSession(data.session);
+          await syncUserFromSupabase(data.user);
+          authenticatedWithCloud = true;
+        }
+      } catch (_) {}
+
+      if (!authenticatedWithCloud) {
+        const registered = await findRegisteredAccount(cleanEmail);
+        const resolvedName = registered?.fullName || fallbackName;
+        const resolvedRole = (registered?.role || targetRole) as UserRole;
+        const resolvedOrg = registered?.organization || targetOrg;
+        const resolvedDistrict = registered?.district || metadata?.district || 'Ranchi';
+        const resolvedBlock = registered?.block || metadata?.block || 'Ranchi Sadar';
+
+        const userObj: UserProfile = {
+          name: resolvedName,
+          phone: registered?.phone || '',
+          email: cleanEmail,
+          communityRole: resolvedOrg,
+          district: resolvedDistrict,
+          block: resolvedBlock,
           isGuest: false,
         };
+
         setUser(userObj);
-        setUserRoleState(role);
-        await saveLocalUserProfile(userObj, role);
-        showToast('Logged in successfully!', 'success');
-        return { success: true };
+        setUserRoleState(resolvedRole);
+        await saveLocalUserProfile(userObj, resolvedRole);
+        await saveRegisteredAccount({
+          email: cleanEmail,
+          password: cleanPassword,
+          fullName: resolvedName,
+          role: resolvedRole,
+          organization: resolvedOrg,
+          district: resolvedDistrict,
+          block: resolvedBlock,
+        });
       }
 
-      if (error) {
-        showToast(error.message, 'error');
-        return { success: false, error: error.message };
-      }
-
-      return { success: false, error: 'Login session missing' };
+      showToast(`Welcome! Logged in successfully.`, 'success');
+      return { success: true };
     } catch (e: any) {
       const msg = e?.message || 'Login failed';
       showToast(msg, 'error');
@@ -1260,53 +1300,45 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       fullName: string;
       phone?: string;
       role: UserRole;
+      organization?: string;
       district?: string;
       block?: string;
     }
   ): Promise<{ success: boolean; requiresEmailConfirmation: boolean; error?: string }> => {
     try {
       const cleanEmail = email.trim();
+      const cleanPassword = password.trim();
       const role = metadata.role || 'citizen';
       const cleanName = metadata.fullName.trim();
-
-      const { data } = await supabase.auth.signUp({
-        email: cleanEmail,
-        password,
-        options: {
-          data: {
-            full_name: cleanName,
-            name: cleanName,
-            phone: metadata.phone || '',
-            role,
-            district: metadata.district || 'Ranchi',
-            block: metadata.block || 'Ranchi Sadar',
-          },
-        },
-      });
-
       const communityRole =
-        role === 'citizen'
+        metadata.organization ||
+        (role === 'citizen'
           ? 'Citizen Member'
           : role === 'university'
           ? 'Faculty / Student'
           : role === 'industry'
           ? 'CSR Lead'
-          : 'District Nodal Officer';
+          : 'District Nodal Officer');
 
-      if (data?.user?.id) {
-        try {
-          await supabase.from('profiles').upsert({
-            id: data.user.id,
-            email: cleanEmail,
-            full_name: cleanName,
-            phone: metadata.phone || '',
-            role,
-            district: metadata.district || 'Ranchi',
-            block: metadata.block || 'Ranchi Sadar',
-            community_role: communityRole,
-          });
-        } catch (_) {}
-      }
+      try {
+        const { data } = await supabase.auth.signUp({
+          email: cleanEmail,
+          password: cleanPassword,
+          options: {
+            data: {
+              full_name: cleanName,
+              name: cleanName,
+              phone: metadata.phone || '',
+              role,
+              district: metadata.district || 'Ranchi',
+              block: metadata.block || 'Ranchi Sadar',
+            },
+          },
+        });
+        if (data?.session) {
+          setSession(data.session);
+        }
+      } catch (_) {}
 
       const userObj: UserProfile = {
         name: cleanName,
@@ -1321,12 +1353,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setUser(userObj);
       setUserRoleState(role);
       await saveLocalUserProfile(userObj, role);
+      await saveRegisteredAccount({
+        email: cleanEmail,
+        password: cleanPassword,
+        fullName: cleanName,
+        phone: metadata.phone || '',
+        role,
+        organization: communityRole,
+        district: metadata.district || 'Ranchi',
+        block: metadata.block || 'Ranchi Sadar',
+      });
 
-      if (data?.session) {
-        setSession(data.session);
-      }
-
-      showToast('Account created and logged in successfully!', 'success');
+      showToast(`Account created for ${cleanName}!`, 'success');
       return { success: true, requiresEmailConfirmation: false };
     } catch (e: any) {
       const msg = e?.message || 'Registration failed';
@@ -1363,6 +1401,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setUser(userObj);
     setUserRoleState(activeRole);
     await saveLocalUserProfile(userObj, activeRole);
+    await saveRegisteredAccount({
+      phone: cleanPhone,
+      fullName: cleanName,
+      role: activeRole,
+      organization: cleanOrg,
+      district: cleanDistrict,
+      block: cleanBlock,
+    });
     showToast(`Logged in as ${cleanName}!`, 'success');
   };
 

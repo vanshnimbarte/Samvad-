@@ -228,7 +228,7 @@ export const CHALLENGES_DATA: Challenge[] = [
       heiId: 'BIT-MESRA',
       heiName: 'Birsa Institute of Technology, Mesra',
       heiShortName: 'BIT Mesra',
-      facultyLead: 'Dr. Anjali Singh (Env. Engineering)',
+      facultyLead: 'University Faculty Lead',
       teamSize: 8,
       disciplines: ['Environmental Engineering', 'Chemistry', 'Public Health'],
       proposalSubmitted: true,

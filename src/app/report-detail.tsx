@@ -78,7 +78,7 @@ export default function ReportDetailScreen() {
     },
     submittedAt: '10 Sep 2026, 09:30 AM',
     submittedBy: {
-      name: 'Sunita Devi',
+      name: 'Community Citizen',
       role: 'Mahila Kalyan SHG Secretary',
       isAnonymous: false,
       contactMethod: 'Phone' as const,

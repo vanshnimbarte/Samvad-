@@ -142,7 +142,7 @@ export const INITIAL_REPORTS: CivicReport[] = [
     },
     submittedAt: '10 Sep 2026, 09:30 AM',
     submittedBy: {
-      name: 'Sunita Devi',
+      name: 'Community Citizen',
       role: 'Mahila Kalyan SHG Secretary',
       isAnonymous: false,
       contactMethod: 'Phone',
@@ -179,7 +179,7 @@ export const INITIAL_REPORTS: CivicReport[] = [
         titleHi: 'रिपोर्ट दर्ज हुई',
         descriptionEn: 'Citizen report received via Samadhan Connect mobile app.',
         descriptionHi: 'नागरिक द्वारा मोबाइल ऐप के जरिए समस्या दर्ज की गई।',
-        actor: 'Citizen Sunita Devi',
+        actor: 'Citizen Member',
         completed: true,
       },
       {
@@ -247,7 +247,7 @@ export const INITIAL_REPORTS: CivicReport[] = [
     moderatedComments: [
       {
         id: 'c1',
-        author: 'Sunita Devi',
+        author: 'Community Member',
         role: 'Reporter',
         comment: 'Thank you for dispatching the team so quickly! The school children really need this.',
         date: '13 Sep 2026, 11:20 AM',
