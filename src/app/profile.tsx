@@ -52,6 +52,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const {
     user,
+    session,
     language,
     setLanguage,
     textSize,
@@ -80,8 +81,8 @@ export default function ProfileScreen() {
     router.push('/auth');
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     router.push('/auth');
   };
 
@@ -129,40 +130,62 @@ export default function ProfileScreen() {
                 <Text style={styles.detailText}>{user.email}</Text>
               </View>
             ) : null}
+            {session?.user ? (
+              <View style={[styles.detailRow, { marginTop: 4 }]}>
+                <ShieldCheck size={14} color="#16A34A" />
+                <Text style={[styles.detailText, { color: '#16A34A', fontWeight: '700' }]}>
+                  Supabase Authenticated (ID: {session.user.id.substring(0, 8)}...)
+                </Text>
+              </View>
+            ) : null}
           </View>
         </View>
 
         <View style={styles.settingsSection}>
           <Text style={[styles.sectionHeading, { fontSize: 15 * fontScale }]}>
-            {language === 'hi' ? 'पोर्टल भूमिका (डेमो)' : 'Portal role (demo)'}
+            {language === 'hi' ? 'सत्यापित भूमिका एवं संगठन' : 'Verified Role & Organization'}
           </Text>
           <View style={styles.settingCard}>
-            <View style={styles.langPillRow}>
-              {(['citizen', 'university', 'industry', 'government'] as UserRole[]).map((role) => (
-                <Pressable
-                  key={role}
-                  onPress={() => setUserRole(role)}
-                  style={[styles.choicePill, userRole === role && styles.choicePillActive]}>
-                  <Text style={[styles.choicePillText, userRole === role && styles.choicePillTextActive]}>
-                    {role === 'citizen' ? 'Citizen' : role === 'university' ? 'University' : role === 'industry' ? 'Industry' : 'Government'}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.sm }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={{ backgroundColor: SamadhanColors.primary + '15', paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.full }}>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: SamadhanColors.primary }}>
+                    {userRole === 'citizen' ? (language === 'hi' ? '👤 नागरिक' : '👤 Citizen') : null}
+                    {userRole === 'university' ? (language === 'hi' ? '🎓 विश्वविद्यालय' : '🎓 University') : null}
+                    {userRole === 'industry' ? (language === 'hi' ? '🏢 उद्योग / CSR' : '🏢 Industry / CSR') : null}
+                    {userRole === 'government' ? (language === 'hi' ? '🏛️ प्रशासनिक' : '🏛️ Government') : null}
                   </Text>
-                </Pressable>
-              ))}
+                </View>
+              </View>
+              <Text style={{ fontSize: 11, color: SamadhanColors.textMuted, fontWeight: '600' }}>
+                {language === 'hi' ? 'सक्रिय सत्र' : 'Active session'}
+              </Text>
             </View>
+            <Text style={{ fontSize: 13, color: SamadhanColors.textSecondary, marginBottom: Spacing.md }}>
+              {user.communityRole}
+            </Text>
+
             <Pressable
               onPress={() => router.push(toHref('/workspace'))}
               style={styles.rowLink}>
               <Briefcase size={18} color={SamadhanColors.primary} />
-              <Text style={styles.rowLinkText}>Open role workspace</Text>
+              <Text style={styles.rowLinkText}>
+                {language === 'hi' ? 'कार्यक्षेत्र खोलें' : 'Open authorized workspace'}
+              </Text>
               <ChevronRight size={16} color={SamadhanColors.textMuted} />
             </Pressable>
-            <Pressable
-              onPress={() => router.push(toHref('/dashboard'))}
-              style={styles.rowLink}>
-              <LayoutDashboard size={18} color={SamadhanColors.primary} />
-              <Text style={styles.rowLinkText}>Open government dashboard</Text>
-              <ChevronRight size={16} color={SamadhanColors.textMuted} />
-            </Pressable>
+
+            {userRole === 'government' ? (
+              <Pressable
+                onPress={() => router.push(toHref('/dashboard'))}
+                style={styles.rowLink}>
+                <LayoutDashboard size={18} color={SamadhanColors.primary} />
+                <Text style={styles.rowLinkText}>
+                  {language === 'hi' ? 'प्रशासनिक डैशबोर्ड खोलें' : 'Open government dashboard'}
+                </Text>
+                <ChevronRight size={16} color={SamadhanColors.textMuted} />
+              </Pressable>
+            ) : null}
           </View>
         </View>
 
@@ -339,57 +362,31 @@ export default function ProfileScreen() {
             <ChevronRight size={18} color={SamadhanColors.textMuted} />
           </Pressable>
 
-          {/* 6. Network Simulation (SIH Demo Mode) */}
+          {/* 6. Network & Cloud Sync */}
           <View style={styles.settingCard}>
             <View style={styles.settingHeader}>
-              <Wifi size={18} color={SamadhanColors.primary} />
+              <Wifi size={18} color={networkStatus === 'offline' ? '#DC2626' : '#16A34A'} />
               <View style={{ flex: 1, marginLeft: 10 }}>
                 <Text style={styles.settingTitle}>
-                  {language === 'hi' ? 'नेटवर्क सिमुलेशन (डेमो)' : 'Network Simulator (SIH Demo)'}
+                  {language === 'hi' ? 'नेटवर्क व डेटा सिंक' : 'Network & Data Sync'}
                 </Text>
                 <Text style={styles.settingDesc}>
-                  {language === 'hi'
-                    ? 'ऑफ़लाइन रिपोर्टिंग और ऑटो-सिंक की प्रस्तुति के लिए'
-                    : 'Demonstrate offline draft queuing & auto-sync'}
+                  {networkStatus === 'offline'
+                    ? (language === 'hi' ? 'ऑफ़लाइन मोड (ड्राफ्ट्स स्थानीय रूप से सुरक्षित)' : 'Offline mode (drafts saved locally)')
+                    : (language === 'hi' ? 'सर्वर से कनेक्टेड (रीयल-टाइम सिंक सक्रिय)' : 'Connected to server (Real-time sync active)')}
                 </Text>
               </View>
             </View>
-            <View style={styles.langPillRow}>
-              {(['online', 'slow', 'offline'] as const).map((st) => (
-                <Pressable
-                  key={st}
-                  accessibilityRole="button"
-                  onPress={() => {
-                    setNetworkStatus(st);
-                    if (st === 'slow') setDataSavingMode(true);
-                  }}
-                  style={[
-                    styles.choicePill,
-                    networkStatus === st && styles.choicePillActive,
-                  ]}>
-                  <Text
-                    style={[
-                      styles.choicePillText,
-                      networkStatus === st && styles.choicePillTextActive,
-                    ]}>
-                    {st.toUpperCase()}
-                  </Text>
-                </Pressable>
-              ))}
-              {drafts.length > 0 && (
-                <Pressable
-                  accessibilityRole="button"
+            {drafts.length > 0 && (
+              <View style={{ marginTop: Spacing.sm }}>
+                <Button
+                  title={language === 'hi' ? `लंबित ड्राफ्ट्स सिंक करें (${drafts.length})` : `Sync Pending Reports (${drafts.length})`}
                   onPress={syncDrafts}
-                  style={[
-                    styles.choicePill,
-                    { backgroundColor: SamadhanColors.secondary, borderColor: SamadhanColors.secondary },
-                  ]}>
-                  <Text style={[styles.choicePillText, { color: '#FFFFFF', fontWeight: '800' }]}>
-                    SYNC ({drafts.length})
-                  </Text>
-                </Pressable>
-              )}
-            </View>
+                  variant="primary"
+                  size="sm"
+                />
+              </View>
+            )}
           </View>
         </View>
 

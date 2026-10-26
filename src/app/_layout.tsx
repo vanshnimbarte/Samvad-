@@ -3,7 +3,7 @@ import { useColorScheme, View, StyleSheet, Platform, BackHandler } from 'react-n
 import { DarkTheme, DefaultTheme, ThemeProvider, Stack, usePathname, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { ObserveRoot, Observe } from 'expo-observe';
+import { ObserveRoot, Observe } from '@/lib/observe';
 
 import { AppProvider } from '@/context/AppContext';
 import { ToastMessage } from '@/components/common/ToastMessage';

@@ -16,84 +16,28 @@ import { VoiceInputButton } from '@/components/common/VoiceInputButton';
 
 const SUBMITTERS: Challenge['submitterType'][] = ['Citizen', 'Community Org', 'PRI', 'ULB', 'Govt Dept'];
 
-const DEMO_PRESETS = [
-  {
-    label: '💧 Arsenic in Gumla',
-    title: 'High arsenic and iron contamination in drinking water wells',
-    description: 'Groundwater testing shows arsenic levels 4x above WHO safe limits across three hamlets in Bishunpur block. Community members and school students face health issues and need low-cost community filtration.',
-    district: 'Gumla',
-    block: 'Bishunpur',
-    villageOrWard: 'Bishunpur Tola 2',
-    address: 'Near Gram Panchayat Bhawan, Bishunpur',
-    affected: '1850',
-    submitterType: 'Community Org' as const,
-    lat: 23.043,
-    lng: 84.542,
-  },
-  {
-    label: '⚡ Solar Storage in Latehar',
-    title: 'Solar cold storage and microgrid failure for forest produce',
-    description: 'Mahua flower and forest produce harvesting season causes immense spoilage due to lack of localized solar microgrid cold storage. Tribal SHGs are forced to sell produce at distress rates.',
-    district: 'Latehar',
-    block: 'Mahuadanr',
-    villageOrWard: 'Orsa Gram',
-    address: 'Van Samiti Yard, Mahuadanr',
-    affected: '3200',
-    submitterType: 'PRI' as const,
-    lat: 23.385,
-    lng: 84.108,
-  },
-  {
-    label: '🌾 Lac Harvesting in Khunti',
-    title: 'Mechanized scraping and pest control for Kusmi lac growers',
-    description: 'Kusmi lac host trees are experiencing heavy pest infestation, and manual sticklac processing causes 30% yield loss. Low-cost mechanical processing and biological pest management needed.',
-    district: 'Khunti',
-    block: 'Torpa',
-    villageOrWard: 'Dorma Panchayat',
-    address: 'Kisan Seva Kendra, Dorma',
-    affected: '950',
-    submitterType: 'Citizen' as const,
-    lat: 22.984,
-    lng: 85.056,
-  },
-];
-
 export default function SubmitChallengeScreen() {
   const router = useRouter();
   const { language, user, submitChallenge, showToast } = useApp();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [affected, setAffected] = useState('1200');
+  const [affected, setAffected] = useState('');
   const [submitterType, setSubmitterType] = useState<Challenge['submitterType']>('Citizen');
   const [media, setMedia] = useState<UploadedMediaItem[]>([]);
   const [location, setLocation] = useState<SelectedLocation>({
-    district: user.district || 'Gumla',
-    block: user.block || 'Gumla',
-    villageOrWard: 'Bishunpur',
-    address: 'Near village handpump, Bishunpur',
-    latitude: 23.043,
-    longitude: 84.542,
+    district: user.district || 'Ranchi',
+    block: user.block || 'Ranchi Sadar',
+    villageOrWard: '',
+    address: '',
+    latitude: 23.3441,
+    longitude: 85.3096,
     isGps: true,
   });
 
-  const preview = useMemo(() => classifyChallenge(title || 'water quality gumla', description || 'contaminated drinking water'), [title, description]);
-
-  const applyPreset = (preset: typeof DEMO_PRESETS[0]) => {
-    setTitle(preset.title);
-    setDescription(preset.description);
-    setAffected(preset.affected);
-    setSubmitterType(preset.submitterType);
-    setLocation({
-      district: preset.district,
-      block: preset.block,
-      villageOrWard: preset.villageOrWard,
-      address: preset.address,
-      latitude: preset.lat,
-      longitude: preset.lng,
-      isGps: true,
-    });
-    showToast(`Loaded preset: ${preset.label}`, 'info');
-  };
+  const preview = useMemo(() => {
+    if (title.trim().length < 3 && description.trim().length < 5) return null;
+    return classifyChallenge(title, description);
+  }, [title, description]);
 
   const handleSubmit = () => {
     if (title.trim().length < 8) {
@@ -118,40 +62,33 @@ export default function SubmitChallengeScreen() {
       title: title.trim(),
       description: description.trim(),
       district: location.district,
-      location: `${location.villageOrWard}, ${location.block}, ${location.district}`,
+      location: location.villageOrWard
+        ? `${location.villageOrWard}, ${location.block}, ${location.district}`
+        : `${location.block}, ${location.district}`,
       affectedCount: Number(affected) || 100,
       submitterType,
-      imageUrl: media[0]?.uri || DOMAIN_EVIDENCE_IMAGES[preview.domain],
+      imageUrl: media[0]?.uri || (preview ? DOMAIN_EVIDENCE_IMAGES[preview.domain] : undefined),
     });
     router.replace(toHref(`/challenge-detail?id=${result.id}`));
   };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-      <Pressable onPress={() => router.back()} style={styles.back}>
+      <Pressable
+        onPress={() => {
+          if (router.canGoBack()) {
+            router.back();
+          } else {
+            router.replace('/');
+          }
+        }}
+        style={styles.back}>
         <ArrowLeft size={20} color={SamadhanColors.primary} />
         <Text style={styles.backText}>{language === 'hi' ? 'वापस' : 'Back'}</Text>
       </Pressable>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Text style={styles.h1}>{language === 'hi' ? 'स्थानीय चुनौती दर्ज करें' : 'Report a local challenge'}</Text>
         <Text style={styles.sub}>Photo → location → submit. AI classifies domain and finds similar nearby reports.</Text>
-
-        {/* Demo Autofill Banner for SIH Video Presentation */}
-        <View style={styles.presetBox}>
-          <View style={styles.presetHeader}>
-            <Sparkles size={14} color={SamadhanColors.action} />
-            <Text style={styles.presetTitle}>
-              {language === 'hi' ? 'त्वरित डेमो चुनौतियां (1-क्लिक भरें)' : 'One-Tap Demo Scenarios (SIH Video)'}
-            </Text>
-          </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.presetRow}>
-            {DEMO_PRESETS.map((p, idx) => (
-              <Pressable key={idx} onPress={() => applyPreset(p)} style={styles.presetChip}>
-                <Text style={styles.presetChipText}>{p.label}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-        </View>
 
         <Text style={styles.label}>Challenge title *</Text>
         <TextInput style={styles.input} value={title} onChangeText={setTitle} placeholder="e.g. Contaminated drinking water in Gumla" placeholderTextColor={SamadhanColors.textMuted} />
@@ -190,16 +127,18 @@ export default function SubmitChallengeScreen() {
         <Text style={styles.label}>Location (map GPS on Android & iOS)</Text>
         <LocationPicker value={location} onChange={setLocation} />
 
-        <View style={styles.aiBox}>
-          <Sparkles size={16} color="#7C3AED" />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.aiTitle}>Live AI preview</Text>
-            <Text style={styles.aiBody}>
-              Domain: {preview.domain} · Confidence {preview.confidence}% · Urgency {preview.urgency}
-            </Text>
-            <Text style={styles.aiBody}>Skills needed: {preview.skills.slice(0, 3).join(', ')}</Text>
+        {preview ? (
+          <View style={styles.aiBox}>
+            <Sparkles size={16} color="#7C3AED" />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.aiTitle}>Live AI preview</Text>
+              <Text style={styles.aiBody}>
+                Domain: {preview.domain} · Confidence {preview.confidence}% · Urgency {preview.urgency}
+              </Text>
+              <Text style={styles.aiBody}>Skills needed: {preview.skills.slice(0, 3).join(', ')}</Text>
+            </View>
           </View>
-        </View>
+        ) : null}
 
         <Button title="Submit challenge" onPress={handleSubmit} variant="action" size="lg" />
         <View style={{ height: 40 }} />
@@ -232,41 +171,6 @@ const styles = StyleSheet.create({
   chipOn: { backgroundColor: SamadhanColors.primary, borderColor: SamadhanColors.primary },
   chipText: { fontSize: 12, fontWeight: '700', color: SamadhanColors.textSecondary },
   chipTextOn: { color: '#FFFFFF' },
-  presetBox: {
-    backgroundColor: '#FFF7ED',
-    borderWidth: 1,
-    borderColor: '#FED7AA',
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
-    marginBottom: Spacing.md,
-  },
-  presetHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 8,
-  },
-  presetTitle: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: SamadhanColors.action,
-  },
-  presetRow: {
-    gap: 8,
-  },
-  presetChip: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#FDBA74',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: Radius.full,
-  },
-  presetChipText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: SamadhanColors.textPrimary,
-  },
   aiBox: {
     flexDirection: 'row',
     gap: 8,

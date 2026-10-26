@@ -52,7 +52,7 @@ const ROLE_COPY: Record<UserRole, { badge: string; title: string; desc: string }
 
 export default function CitizenHomeScreen() {
   const router = useRouter();
-  const { t, language, fontScale, userRole, setUserRole, challenges, user } = useApp();
+  const { t, language, fontScale, userRole, challenges, user } = useApp();
   const copy = ROLE_COPY[userRole];
   const featured = challenges.slice(0, 3);
 
@@ -62,22 +62,6 @@ export default function CitizenHomeScreen() {
       <OfflineBanner />
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.roleRow}>
-          {(['citizen', 'university', 'industry', 'government'] as UserRole[]).map((role) => (
-            <Pressable
-              key={role}
-              onPress={() => setUserRole(role)}
-              style={[styles.roleChip, userRole === role && styles.roleChipActive]}>
-              <Text style={[styles.roleChipText, userRole === role && styles.roleChipTextActive]}>
-                {role === 'citizen' ? (language === 'hi' ? '👤 नागरिक' : '👤 Citizen') : null}
-                {role === 'university' ? (language === 'hi' ? '🎓 विश्वविद्यालय' : '🎓 University') : null}
-                {role === 'industry' ? (language === 'hi' ? '🏢 उद्योग' : '🏢 Industry') : null}
-                {role === 'government' ? (language === 'hi' ? '🏛️ सरकार' : '🏛️ Government') : null}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-
         <View style={[styles.heroCard, Shadows.md]}>
           <View style={styles.heroTopRow}>
             <View style={styles.heroBadge}>

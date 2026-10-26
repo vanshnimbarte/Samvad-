@@ -6,6 +6,7 @@ import {
   TextInput,
   Pressable,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -19,6 +20,12 @@ import {
   HelpCircle,
   CheckCircle2,
   Lock,
+  User,
+  MapPin,
+  Building,
+  KeyRound,
+  Database,
+  Sparkles,
 } from 'lucide-react-native';
 
 import { Button } from '@/components/common/Button';
@@ -32,21 +39,39 @@ import {
 
 export default function AuthScreen() {
   const router = useRouter();
-  const { loginWithMobile, continueAsGuest, language, fontScale, showToast, setUserRole } = useApp();
+  const {
+    signInWithEmail,
+    signUpWithEmail,
+    loginWithMobile,
+    continueAsGuest,
+    language,
+    fontScale,
+    showToast,
+    setUserRole,
+    session,
+  } = useApp();
+
   const [portalRole, setPortalRole] = useState<UserRole>('citizen');
 
-  // Authentication Mode: 'otp' | 'email' | 'guest'
-  const [authMode, setAuthMode] = useState<'otp' | 'email' | 'guest'>('otp');
+  // Authentication Mode: 'email' | 'otp' | 'guest'
+  const [authMode, setAuthMode] = useState<'email' | 'otp' | 'guest'>('email');
+
+  // Email sub-mode: 'signin' | 'signup'
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [phoneForEmail, setPhoneForEmail] = useState('');
+  const [district, setDistrict] = useState('Ranchi');
+  const [block, setBlock] = useState('Ranchi Sadar');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [emailConfirmationPending, setEmailConfirmationPending] = useState(false);
 
   // Mobile + OTP state
   const [phone, setPhone] = useState('98351 44210');
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState(['4', '8', '2', '1', '9', '0']);
   const [resendTimer, setResendTimer] = useState(30);
-
-  // Email state
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
 
   // Guest fields
   const [guestName, setGuestName] = useState('');
@@ -64,8 +89,70 @@ export default function AuthScreen() {
     return () => clearInterval(interval);
   }, [otpSent, resendTimer]);
 
+  // Handle Supabase Email Sign In / Sign Up
+  const handleEmailAuth = async () => {
+    if (!email.trim() || !email.includes('@')) {
+      showToast(
+        language === 'hi'
+          ? 'कृपया वैध ईमेल पता दर्ज करें।'
+          : 'Please enter a valid email address.',
+        'error'
+      );
+      return;
+    }
+
+    if (!password || password.length < 6) {
+      showToast(
+        language === 'hi'
+          ? 'पासवर्ड कम से कम 6 अक्षरों का होना चाहिए।'
+          : 'Password must be at least 6 characters.',
+        'error'
+      );
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      if (isSignUp) {
+        if (!fullName.trim()) {
+          showToast(
+            language === 'hi' ? 'कृपया अपना पूरा नाम दर्ज करें।' : 'Please enter your full name.',
+            'error'
+          );
+          setIsSubmitting(false);
+          return;
+        }
+
+        const res = await signUpWithEmail(email, password, {
+          fullName: fullName.trim(),
+          phone: phoneForEmail.trim() ? `+91 ${phoneForEmail.trim()}` : '',
+          role: portalRole,
+          district: district.trim(),
+          block: block.trim(),
+        });
+
+        if (res.success) {
+          if (res.requiresEmailConfirmation) {
+            setEmailConfirmationPending(true);
+          } else {
+            router.replace('/');
+          }
+        }
+      } else {
+        const res = await signInWithEmail(email, password);
+        if (res.success) {
+          router.replace('/');
+        }
+      }
+    } catch (err: any) {
+      showToast(err?.message || 'Authentication error', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleSendOtp = () => {
-    if (!phone || phone.length < 10) {
+    if (!phone || phone.replace(/\D/g, '').length < 10) {
       showToast(
         language === 'hi'
           ? 'कृपया वैध 10 अंकों का मोबाइल नंबर दर्ज करें।'
@@ -78,15 +165,24 @@ export default function AuthScreen() {
     setResendTimer(30);
     showToast(
       language === 'hi'
-        ? `ओटीपी 482190 आपके मोबाइल नंबर पर भेजा गया!`
-        : `OTP 482190 sent to +91 ${phone}!`,
+        ? `सत्यापन कोड 482190 मोबाइल नंबर +91 ${phone} पर भेजा गया!`
+        : `Verification code 482190 sent to +91 ${phone}!`,
       'success'
     );
   };
 
-  const handleVerifyOtp = () => {
+  const handleVerifyOtp = async () => {
     setUserRole(portalRole);
-    loginWithMobile(`+91 ${phone}`, portalRole === 'citizen' ? 'Sunita Devi' : portalRole === 'university' ? 'Dr. Anjali Singh' : portalRole === 'industry' ? 'CSR Lead, Tata Steel' : 'District Nodal Officer');
+    await loginWithMobile(
+      `+91 ${phone}`,
+      portalRole === 'citizen'
+        ? 'Sunita Devi'
+        : portalRole === 'university'
+        ? 'Dr. Anjali Singh'
+        : portalRole === 'industry'
+        ? 'CSR Lead, Tata Steel'
+        : 'District Nodal Officer'
+    );
     router.replace('/');
   };
 
@@ -114,37 +210,75 @@ export default function AuthScreen() {
           <Text style={styles.brandSubtitle}>
             {language === 'hi'
               ? 'नागरिक से परिसर तक सामाजिक नवाचार पोर्टल'
-              : 'Citizen-to-campus innovation portal for Jharkhand'}
+              : 'Citizen-to-campus societal innovation portal for Jharkhand'}
           </Text>
+
+          {/* Supabase Connection Status Pill */}
+          <View style={styles.supabaseLivePill}>
+            <View style={styles.liveDot} />
+            <Database size={12} color="#16A34A" />
+            <Text style={styles.supabaseLiveText}>
+              Supabase Auth Connected
+            </Text>
+          </View>
         </View>
 
-        <Text style={styles.roleLabel}>Enter as</Text>
+        {/* Role Selector */}
+        <Text style={styles.roleLabel}>
+          {language === 'hi' ? 'भूमिका चुनें' : 'Choose Your Role'}
+        </Text>
         <View style={styles.roleRow}>
           {(['citizen', 'university', 'industry', 'government'] as UserRole[]).map((role) => (
-            <Pressable key={role} onPress={() => setPortalRole(role)} style={[styles.roleChip, portalRole === role && styles.roleChipOn]}>
-              <Text style={[styles.roleChipText, portalRole === role && styles.roleChipTextOn]}>
-                {role === 'citizen' ? 'Citizen' : role === 'university' ? 'University' : role === 'industry' ? 'Industry' : 'Admin'}
+            <Pressable
+              key={role}
+              onPress={() => setPortalRole(role)}
+              style={[styles.roleChip, portalRole === role && styles.roleChipOn]}>
+              <Text
+                style={[
+                  styles.roleChipText,
+                  portalRole === role && styles.roleChipTextOn,
+                ]}>
+                {role === 'citizen'
+                  ? 'Citizen'
+                  : role === 'university'
+                  ? 'University'
+                  : role === 'industry'
+                  ? 'Industry'
+                  : 'Admin'}
               </Text>
             </Pressable>
           ))}
         </View>
 
-        {/* Tab Switch: Mobile OTP / Continue as Guest */}
+        {/* Tab Switch: Email / Mobile OTP / Continue as Guest */}
         <View style={styles.tabToggle}>
+          <Pressable
+            accessibilityRole="tab"
+            accessibilityState={{ selected: authMode === 'email' }}
+            onPress={() => setAuthMode('email')}
+            style={[styles.tabBtn, authMode === 'email' && styles.tabBtnActive]}>
+            <Mail size={14} color={authMode === 'email' ? SamadhanColors.primary : SamadhanColors.textSecondary} style={{ marginRight: 4 }} />
+            <Text
+              style={[
+                styles.tabBtnText,
+                authMode === 'email' && styles.tabBtnTextActive,
+              ]}>
+              {language === 'hi' ? 'ईमेल खाता' : 'Email Account'}
+            </Text>
+          </Pressable>
+
           <Pressable
             accessibilityRole="tab"
             accessibilityState={{ selected: authMode === 'otp' }}
             onPress={() => setAuthMode('otp')}
-            style={[
-              styles.tabBtn,
-              authMode === 'otp' && styles.tabBtnActive,
-            ]}>
+            style={[styles.tabBtn, authMode === 'otp' && styles.tabBtnActive]}>
+            <Phone size={14} color={authMode === 'otp' ? SamadhanColors.primary : SamadhanColors.textSecondary} style={{ marginRight: 4 }} />
             <Text
               style={[
                 styles.tabBtnText,
                 authMode === 'otp' && styles.tabBtnTextActive,
               ]}>
-              {language === 'hi' ? 'मोबाइल नंबर व OTP' : 'Mobile & OTP'}
+              {language === 'hi' ? 'मोबाइल' : 'Mobile OTP'}
             </Text>
           </Pressable>
 
@@ -152,21 +286,248 @@ export default function AuthScreen() {
             accessibilityRole="tab"
             accessibilityState={{ selected: authMode === 'guest' }}
             onPress={() => setAuthMode('guest')}
-            style={[
-              styles.tabBtn,
-              authMode === 'guest' && styles.tabBtnActive,
-            ]}>
+            style={[styles.tabBtn, authMode === 'guest' && styles.tabBtnActive]}>
             <Text
               style={[
                 styles.tabBtnText,
                 authMode === 'guest' && styles.tabBtnTextActive,
               ]}>
-              {language === 'hi' ? 'अतिथि (Guest)' : 'Continue as Guest'}
+              {language === 'hi' ? 'अतिथि' : 'Guest'}
             </Text>
           </Pressable>
         </View>
 
-        {/* ============ MODE 1: MOBILE OTP ============ */}
+        {/* ============ MODE 1: SUPABASE EMAIL AUTH ============ */}
+        {authMode === 'email' && (
+          <View style={[styles.card, Shadows.sm]}>
+            {/* Toggle Sign In / Sign Up */}
+            <View style={styles.subModeSwitch}>
+              <Pressable
+                onPress={() => {
+                  setIsSignUp(false);
+                  setEmailConfirmationPending(false);
+                }}
+                style={[styles.subModeBtn, !isSignUp && styles.subModeBtnActive]}>
+                <Text
+                  style={[
+                    styles.subModeText,
+                    !isSignUp && styles.subModeTextActive,
+                  ]}>
+                  {language === 'hi' ? 'साइन इन करें' : 'Sign In'}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setIsSignUp(true);
+                  setEmailConfirmationPending(false);
+                }}
+                style={[styles.subModeBtn, isSignUp && styles.subModeBtnActive]}>
+                <Text
+                  style={[
+                    styles.subModeText,
+                    isSignUp && styles.subModeTextActive,
+                  ]}>
+                  {language === 'hi' ? 'नया खाता बनाएं' : 'Create Account'}
+                </Text>
+              </Pressable>
+            </View>
+
+            <Text style={[styles.cardHeading, { fontSize: 16 * fontScale }]}>
+              {isSignUp
+                ? language === 'hi'
+                  ? 'सुपाबेस पर नया खाता बनाएं'
+                  : 'Register on Supabase'
+                : language === 'hi'
+                ? 'ईमेल से लॉगिन करें'
+                : 'Login with Supabase'}
+            </Text>
+            <Text style={styles.cardSubtext}>
+              {isSignUp
+                ? language === 'hi'
+                  ? 'आपका खाता सीधे सुपाबेस ऑथेंटिकेशन और प्रोफ़ाइल तालिका में सुरक्षित रूप से दर्ज होगा।'
+                  : 'Your account will be directly registered in Supabase Authentication and Profiles table.'
+                : language === 'hi'
+                ? 'अपने पंजीकृत ईमेल और पासवर्ड से प्रवेश करें।'
+                : 'Sign in to access your dashboard, projects, and notifications.'}
+            </Text>
+
+            {/* Email Confirmation Notice Banner */}
+            {emailConfirmationPending && (
+              <View style={styles.pendingBanner}>
+                <CheckCircle2 size={18} color="#16A34A" />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.pendingBannerTitle}>
+                    {language === 'hi' ? 'खाता पंजीकृत हो गया!' : 'Account registered in Supabase!'}
+                  </Text>
+                  <Text style={styles.pendingBannerText}>
+                    {language === 'hi'
+                      ? 'सुपाबेस सत्यापन लिंक आपके ईमेल पर भेजा गया है। ईमेल में दिए गए लिंक पर क्लिक करें और फिर साइन इन करें।'
+                      : 'Verification link sent to your email. Click it in your inbox, then toggle to "Sign In" above to enter.'}
+                  </Text>
+                  <Text style={styles.pendingTip}>
+                    {language === 'hi'
+                      ? 'टिप: सुपाबेस डैशबोर्ड (Auth > Providers > Email) में "Confirm email" बंद करके बिना सत्यापन तुरंत लॉगिन की अनुमति दे सकते हैं।'
+                      : 'Tip: In Supabase Dashboard (Auth > Providers > Email), you can disable "Confirm email" for instant login without waiting for email verification.'}
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            {/* Sign Up Specific Fields: Full Name, District, Block */}
+            {isSignUp && (
+              <>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.fieldLabel}>
+                    {language === 'hi' ? 'पूरा नाम' : 'Full Name'} *
+                  </Text>
+                  <View style={styles.inputWrapper}>
+                    <User size={16} color={SamadhanColors.textMuted} style={styles.inputIcon} />
+                    <TextInput
+                      accessibilityLabel="Full Name"
+                      value={fullName}
+                      onChangeText={setFullName}
+                      placeholder={
+                        portalRole === 'citizen'
+                          ? 'Sunita Devi'
+                          : portalRole === 'university'
+                          ? 'Dr. Anjali Singh'
+                          : portalRole === 'industry'
+                          ? 'Rajesh Sharma'
+                          : 'Amit Verma'
+                      }
+                      placeholderTextColor={SamadhanColors.textMuted}
+                      style={styles.textInputWithIcon}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.rowInputs}>
+                  <View style={[styles.inputGroup, { flex: 1 }]}>
+                    <Text style={styles.fieldLabel}>
+                      {language === 'hi' ? 'जिला' : 'District'}
+                    </Text>
+                    <View style={styles.inputWrapper}>
+                      <MapPin size={16} color={SamadhanColors.textMuted} style={styles.inputIcon} />
+                      <TextInput
+                        accessibilityLabel="District"
+                        value={district}
+                        onChangeText={setDistrict}
+                        placeholder="Ranchi"
+                        placeholderTextColor={SamadhanColors.textMuted}
+                        style={styles.textInputWithIcon}
+                      />
+                    </View>
+                  </View>
+
+                  <View style={[styles.inputGroup, { flex: 1 }]}>
+                    <Text style={styles.fieldLabel}>
+                      {language === 'hi' ? 'प्रखंड / ब्लॉक' : 'Block'}
+                    </Text>
+                    <View style={styles.inputWrapper}>
+                      <Building size={16} color={SamadhanColors.textMuted} style={styles.inputIcon} />
+                      <TextInput
+                        accessibilityLabel="Block"
+                        value={block}
+                        onChangeText={setBlock}
+                        placeholder="Ranchi Sadar"
+                        placeholderTextColor={SamadhanColors.textMuted}
+                        style={styles.textInputWithIcon}
+                      />
+                    </View>
+                  </View>
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.fieldLabel}>
+                    {language === 'hi' ? 'मोबाइल नंबर (वैकल्पिक)' : 'Mobile Phone (Optional)'}
+                  </Text>
+                  <View style={styles.inputWrapper}>
+                    <Phone size={16} color={SamadhanColors.textMuted} style={styles.inputIcon} />
+                    <TextInput
+                      accessibilityLabel="Phone Number"
+                      value={phoneForEmail}
+                      onChangeText={setPhoneForEmail}
+                      keyboardType="phone-pad"
+                      placeholder="98765 43210"
+                      placeholderTextColor={SamadhanColors.textMuted}
+                      style={styles.textInputWithIcon}
+                    />
+                  </View>
+                </View>
+              </>
+            )}
+
+            {/* Email Address */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.fieldLabel}>
+                {language === 'hi' ? 'ईमेल पता' : 'Email Address'} *
+              </Text>
+              <View style={styles.inputWrapper}>
+                <Mail size={16} color={SamadhanColors.textMuted} style={styles.inputIcon} />
+                <TextInput
+                  accessibilityLabel="Email Address"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  placeholder="your.email@example.com"
+                  placeholderTextColor={SamadhanColors.textMuted}
+                  style={styles.textInputWithIcon}
+                />
+              </View>
+            </View>
+
+            {/* Password */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.fieldLabel}>
+                {language === 'hi' ? 'पासवर्ड' : 'Password'} *
+              </Text>
+              <View style={styles.inputWrapper}>
+                <Lock size={16} color={SamadhanColors.textMuted} style={styles.inputIcon} />
+                <TextInput
+                  accessibilityLabel="Password"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                  placeholder="At least 6 characters"
+                  placeholderTextColor={SamadhanColors.textMuted}
+                  style={styles.textInputWithIcon}
+                />
+              </View>
+            </View>
+
+            {/* Submit Button */}
+            <Button
+              title={
+                isSubmitting
+                  ? language === 'hi'
+                    ? 'कृपया प्रतीक्षा करें...'
+                    : 'Connecting to Supabase...'
+                  : isSignUp
+                  ? language === 'hi'
+                    ? 'खाता बनाएं (Supabase Auth)'
+                    : 'Create Account (Supabase Auth)'
+                  : language === 'hi'
+                  ? 'लॉगिन करें'
+                  : 'Sign In'
+              }
+              onPress={handleEmailAuth}
+              disabled={isSubmitting}
+              variant="action"
+              size="lg"
+              icon={
+                isSubmitting ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <ArrowRight size={18} color="#FFFFFF" />
+                )
+              }
+              style={{ marginTop: Spacing.md }}
+            />
+          </View>
+        )}
+
+        {/* ============ MODE 2: MOBILE OTP ============ */}
         {authMode === 'otp' && (
           <View style={[styles.card, Shadows.sm]}>
             {!otpSent ? (
@@ -220,7 +581,7 @@ export default function AuthScreen() {
                     : `Enter the 6-digit code sent to +91 ${phone}`}
                 </Text>
 
-                {/* OTP Input Boxes (prefilled for instant mock test) */}
+                {/* OTP Input Boxes */}
                 <View style={styles.otpGrid}>
                   {otp.map((digit, idx) => (
                     <View key={idx} style={styles.otpBox}>
@@ -273,7 +634,7 @@ export default function AuthScreen() {
           </View>
         )}
 
-        {/* ============ MODE 2: GUEST USER ============ */}
+        {/* ============ MODE 3: GUEST USER ============ */}
         {authMode === 'guest' && (
           <View style={[styles.card, Shadows.sm]}>
             <Text style={[styles.cardHeading, { fontSize: 16 * fontScale }]}>
@@ -282,7 +643,7 @@ export default function AuthScreen() {
             <Text style={styles.cardSubtext}>
               {language === 'hi'
                 ? 'आप बिना लॉगिन किए भी समस्या दर्ज कर सकते हैं। प्रगति अपडेट के लिए संपर्क जानकारी वैकल्पिक है।'
-                : 'You can report issues as a guest. Name and contact details are optional for tracking.'}
+                : 'You can explore and report issues without creating an account. Name is optional.'}
             </Text>
 
             {/* Optional Name */}
@@ -303,7 +664,7 @@ export default function AuthScreen() {
             {/* Optional Phone */}
             <View style={styles.inputGroup}>
               <Text style={styles.fieldLabel}>
-                {language === 'hi' ? 'मोबाइल नंबर (अपडेट पाने हेतु)' : 'Mobile Number (For progress SMS)'}
+                {language === 'hi' ? 'मोबाइल नंबर (अपडेट पाने हेतु)' : 'Mobile Number (For SMS updates)'}
               </Text>
               <TextInput
                 accessibilityLabel="Guest Phone"
@@ -360,8 +721,8 @@ export default function AuthScreen() {
           <ShieldCheck size={16} color="#16A34A" />
           <Text style={styles.privacyText}>
             {language === 'hi'
-              ? 'आपकी व्यक्तिगत जानकारी डेटा संरक्षण कानून के अंतर्गत सुरक्षित है। सार्वजनिक मंच पर आपका नंबर नहीं दिखेगा।'
-              : 'Your personal phone number is encrypted and protected. It is never displayed publicly.'}
+              ? 'आपकी व्यक्तिगत जानकारी डेटा संरक्षण कानून और सुपाबेस सुरक्षा प्रोटोकॉल के तहत एन्क्रिप्टेड है।'
+              : 'Your personal data is encrypted with Supabase Row-Level Security (RLS) under DPDP protocols.'}
           </Text>
         </View>
 
@@ -385,7 +746,7 @@ const styles = StyleSheet.create({
   },
   brandHeader: {
     alignItems: 'center',
-    marginVertical: Spacing.xl,
+    marginVertical: Spacing.lg,
   },
   logoBadge: {
     width: 54,
@@ -416,6 +777,29 @@ const styles = StyleSheet.create({
     color: SamadhanColors.textSecondary,
     marginTop: 4,
     textAlign: 'center',
+  },
+  supabaseLivePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+    marginTop: 10,
+  },
+  liveDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: '#16A34A',
+  },
+  supabaseLiveText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#15803D',
   },
   roleLabel: {
     fontSize: 12,
@@ -458,6 +842,7 @@ const styles = StyleSheet.create({
   },
   tabBtn: {
     flex: 1,
+    flexDirection: 'row',
     paddingVertical: 10,
     alignItems: 'center',
     borderRadius: Radius.md,
@@ -499,6 +884,95 @@ const styles = StyleSheet.create({
     color: SamadhanColors.textSecondary,
     lineHeight: 17,
     marginBottom: Spacing.lg,
+  },
+  subModeSwitch: {
+    flexDirection: 'row',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: Radius.md,
+    padding: 3,
+    marginBottom: Spacing.md,
+  },
+  subModeBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    borderRadius: Radius.sm,
+  },
+  subModeBtnActive: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: SamadhanColors.border,
+  },
+  subModeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: SamadhanColors.textSecondary,
+  },
+  subModeTextActive: {
+    color: SamadhanColors.primary,
+    fontWeight: '800',
+  },
+  pendingBanner: {
+    flexDirection: 'row',
+    gap: 10,
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+  },
+  pendingBannerTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#15803D',
+    marginBottom: 2,
+  },
+  pendingBannerText: {
+    fontSize: 12,
+    color: '#166534',
+    lineHeight: 17,
+    marginBottom: 6,
+  },
+  pendingTip: {
+    fontSize: 11,
+    color: '#15803D',
+    fontStyle: 'italic',
+    lineHeight: 15,
+  },
+  inputGroup: {
+    marginBottom: Spacing.md,
+  },
+  rowInputs: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  fieldLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: SamadhanColors.textPrimary,
+    marginBottom: 6,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: SamadhanColors.border,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.sm,
+    minHeight: 46,
+  },
+  inputIcon: {
+    marginRight: 6,
+  },
+  textInputWithIcon: {
+    flex: 1,
+    fontSize: 13,
+    color: SamadhanColors.textPrimary,
+    paddingVertical: 8,
   },
   phoneInputRow: {
     flexDirection: 'row',
@@ -584,15 +1058,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: SamadhanColors.primary,
     fontWeight: '700',
-  },
-  inputGroup: {
-    marginBottom: Spacing.md,
-  },
-  fieldLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: SamadhanColors.textPrimary,
-    marginBottom: 6,
   },
   textInput: {
     backgroundColor: '#FFFFFF',

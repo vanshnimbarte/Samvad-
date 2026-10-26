@@ -19,7 +19,7 @@ export default function ChallengeDetailScreen() {
     language,
     fontScale,
     userRole,
-    setUserRole,
+    user,
     getChallengeById,
     challenges,
     supportChallenge,
@@ -41,25 +41,23 @@ export default function ChallengeDetailScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <View style={styles.topNavRow}>
-        <Pressable onPress={() => router.back()} style={styles.back}>
+        <Pressable
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace('/');
+            }
+          }}
+          style={styles.back}>
           <ArrowLeft size={20} color={SamadhanColors.primary} />
           <Text style={styles.backText}>{language === 'hi' ? 'वापस' : 'Back'}</Text>
         </Pressable>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.roleSwitchRow}>
-          {(['citizen', 'university', 'industry', 'government'] as const).map((role) => (
-            <Pressable
-              key={role}
-              onPress={() => setUserRole(role)}
-              style={[styles.roleSwitchChip, userRole === role && styles.roleSwitchChipActive]}>
-              <Text style={[styles.roleSwitchChipText, userRole === role && styles.roleSwitchChipTextActive]}>
-                {role === 'citizen' ? '👤 Citizen' : null}
-                {role === 'government' ? '🏛️ Admin' : null}
-                {role === 'university' ? '🎓 University' : null}
-                {role === 'industry' ? '🏢 Industry' : null}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
+        <View style={styles.viewerBadge}>
+          <Text style={styles.viewerBadgeText} numberOfLines={1}>
+            {userRole === 'citizen' ? '👤 Citizen' : userRole === 'government' ? '🏛️ Admin' : userRole === 'university' ? '🎓 University' : '🏢 Industry'} · {user.name}
+          </Text>
+        </View>
       </View>
       <ScrollView contentContainerStyle={styles.content}>
         <Image source={{ uri: getChallengeImage(challenge) }} style={styles.cover} />
@@ -237,36 +235,25 @@ const styles = StyleSheet.create({
   topNavRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: Spacing.md,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: SamadhanColors.border,
   },
-  roleSwitchRow: {
-    flexDirection: 'row',
-    gap: 6,
-    paddingLeft: Spacing.sm,
-    paddingRight: Spacing.md,
-  },
-  roleSwitchChip: {
-    paddingHorizontal: 8,
+  viewerBadge: {
+    paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: Radius.full,
     backgroundColor: '#F1F5F9',
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    maxWidth: '65%',
   },
-  roleSwitchChipActive: {
-    backgroundColor: SamadhanColors.primary,
-    borderColor: SamadhanColors.primary,
-  },
-  roleSwitchChipText: {
+  viewerBadgeText: {
     fontSize: 11,
     fontWeight: '700',
     color: SamadhanColors.textSecondary,
-  },
-  roleSwitchChipTextActive: {
-    color: '#FFFFFF',
   },
   roleActionBox: {
     marginTop: Spacing.xl,

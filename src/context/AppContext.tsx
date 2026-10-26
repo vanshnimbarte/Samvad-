@@ -1,4 +1,14 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { Session, User } from '@supabase/supabase-js';
+import {
+  supabase,
+  fetchChallengesFromSupabase,
+  insertChallengeToSupabase,
+  fetchReportsFromSupabase,
+  insertReportToSupabase,
+  insertChallengeCommentToSupabase,
+  insertReportCommentToSupabase,
+} from '@/lib/supabase';
 import {
   CivicReport,
   CivicNotification,
@@ -86,10 +96,24 @@ interface AppContextType {
 
   // User Authentication
   user: UserProfile;
-  updateUserProfile: (profile: Partial<UserProfile>) => void;
-  loginWithMobile: (phone: string, name?: string) => void;
+  session: Session | null;
+  isLoadingAuth: boolean;
+  updateUserProfile: (profile: Partial<UserProfile>) => Promise<void>;
+  loginWithMobile: (phone: string, name?: string) => Promise<void>;
+  signInWithEmail: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signUpWithEmail: (
+    email: string,
+    password: string,
+    metadata: {
+      fullName: string;
+      phone?: string;
+      role: UserRole;
+      district?: string;
+      block?: string;
+    }
+  ) => Promise<{ success: boolean; requiresEmailConfirmation: boolean; error?: string }>;
   continueAsGuest: (name?: string, phone?: string) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   userRole: UserRole;
   setUserRole: (role: UserRole) => void;
 
@@ -209,6 +233,148 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // User
   const [user, setUser] = useState<UserProfile>(DEFAULT_USER);
   const [userRole, setUserRoleState] = useState<UserRole>('citizen');
+  const [session, setSession] = useState<Session | null>(null);
+  const [isLoadingAuth, setIsLoadingAuth] = useState<boolean>(true);
+
+  const syncUserFromSupabase = useCallback(async (sbUser: User | null) => {
+    if (!sbUser) return;
+
+    try {
+      const meta = sbUser.user_metadata || {};
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', sbUser.id)
+        .maybeSingle();
+
+      const role: UserRole = (profileData?.role || meta.role || 'citizen') as UserRole;
+      const name =
+        profileData?.full_name ||
+        meta.full_name ||
+        meta.name ||
+        (sbUser.email ? sbUser.email.split('@')[0] : 'Citizen');
+      const phone = profileData?.phone || meta.phone || sbUser.phone || '';
+      const district = profileData?.district || meta.district || 'Ranchi';
+      const block = profileData?.block || meta.block || 'Ranchi Sadar';
+      const communityRole =
+        profileData?.community_role ||
+        meta.community_role ||
+        (role === 'citizen'
+          ? 'Citizen Member'
+          : role === 'university'
+          ? 'Faculty Lead'
+          : role === 'industry'
+          ? 'CSR Lead'
+          : 'District Nodal Officer');
+
+      setUserRoleState(role);
+      setUser({
+        name,
+        phone,
+        email: sbUser.email || '',
+        communityRole,
+        district,
+        block,
+        isGuest: false,
+      });
+
+      // If profiles table exists and profile row doesn't, try to insert it
+      if (!profileData) {
+        try {
+          await supabase.from('profiles').upsert({
+            id: sbUser.id,
+            email: sbUser.email,
+            full_name: name,
+            phone,
+            role,
+            district,
+            block,
+            community_role: communityRole,
+          });
+        } catch (_) {}
+      }
+    } catch (e) {
+      console.warn('Error syncing profile from Supabase:', e);
+      const meta = sbUser.user_metadata || {};
+      const role: UserRole = (meta.role || 'citizen') as UserRole;
+      setUserRoleState(role);
+      setUser({
+        name: meta.full_name || meta.name || (sbUser.email ? sbUser.email.split('@')[0] : 'Citizen'),
+        phone: meta.phone || sbUser.phone || '',
+        email: sbUser.email || '',
+        communityRole: meta.community_role || 'Citizen Member',
+        district: meta.district || 'Ranchi',
+        block: meta.block || 'Ranchi Sadar',
+        isGuest: false,
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    // Check active session from storage
+    supabase.auth
+      .getSession()
+      .then(({ data: { session: existingSession } }) => {
+        if (!mounted) return;
+        setSession(existingSession);
+        if (existingSession?.user) {
+          syncUserFromSupabase(existingSession.user);
+        }
+        setIsLoadingAuth(false);
+      })
+      .catch((err) => {
+        console.warn('Supabase getSession error:', err);
+        if (mounted) setIsLoadingAuth(false);
+      });
+
+    // Listen for auth state changes (login, logout, token refresh)
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+      if (!mounted) return;
+      setSession(newSession);
+      if (newSession?.user) {
+        await syncUserFromSupabase(newSession.user);
+      } else if (_event === 'SIGNED_OUT') {
+        setUser({
+          name: 'Guest Citizen',
+          phone: '',
+          email: '',
+          communityRole: 'Guest',
+          district: 'Ranchi',
+          block: 'Ranchi Sadar',
+          isGuest: true,
+        });
+        setUserRoleState('citizen');
+      }
+    });
+
+    // Fetch challenges and reports from Supabase if available
+    fetchChallengesFromSupabase().then((sbChallenges) => {
+      if (!mounted || !sbChallenges || sbChallenges.length === 0) return;
+      setChallenges((prev) => {
+        const ids = new Set(sbChallenges.map((c) => c.id));
+        const filteredPrev = prev.filter((p) => !ids.has(p.id));
+        return [...sbChallenges, ...filteredPrev];
+      });
+    });
+
+    fetchReportsFromSupabase().then((sbReports) => {
+      if (!mounted || !sbReports || sbReports.length === 0) return;
+      setReports((prev) => {
+        const ids = new Set(sbReports.map((r) => r.id));
+        const filteredPrev = prev.filter((p) => !ids.has(p.id));
+        return [...sbReports, ...filteredPrev];
+      });
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [syncUserFromSupabase]);
 
   const setUserRole = (role: UserRole) => {
     setUserRoleState(role);
@@ -436,6 +602,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     setReports((prev) => [newReport, ...prev]);
 
+    // Persist to Supabase
+    insertReportToSupabase(newReport, session?.user?.id);
+
     // Also inject a notification
     const newNotif: CivicNotification = {
       id: `n-${Date.now()}`,
@@ -588,6 +757,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return r;
       })
     );
+    insertReportCommentToSupabase(
+      reportId,
+      comment.trim(),
+      user.name,
+      user.isGuest ? 'Community Member' : user.communityRole,
+      session?.user?.id
+    );
     showToast(
       language === 'hi' ? 'आपकी टिप्पणी दर्ज की गई।' : 'Your comment was posted.',
       'success'
@@ -677,6 +853,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       created.assignedUniversity = undefined;
     }
     setChallenges((prev) => [created, ...prev]);
+
+    // Persist to Supabase
+    insertChallengeToSupabase(created, session?.user?.id);
+
     pushPortalNote(
       `Challenge logged (${newId})`,
       `AI classified as ${ai.domain} (${ai.confidence}% confidence). ${duplicates.length ? `${duplicates.length} similar reports found nearby.` : 'Queued for validation and HEI routing.'}`,
@@ -712,6 +892,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           : c
       )
     );
+    insertChallengeCommentToSupabase(id, text.trim(), user.name, userRole, session?.user?.id);
     showToast('Comment posted to the public challenge thread.', 'success');
   };
 
@@ -845,18 +1026,136 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Auth actions
-  const loginWithMobile = (phone: string, name?: string) => {
+  const signInWithEmail = async (
+    email: string,
+    password: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+
+      if (error) {
+        showToast(error.message, 'error');
+        return { success: false, error: error.message };
+      }
+
+      if (data.session) {
+        setSession(data.session);
+        if (data.user) {
+          await syncUserFromSupabase(data.user);
+        }
+        showToast(
+          language === 'hi' ? 'सफलतापूर्वक लॉगिन हो गए!' : 'Logged in successfully!',
+          'success'
+        );
+        return { success: true };
+      }
+
+      return { success: false, error: 'Login session missing' };
+    } catch (e: any) {
+      const msg = e?.message || 'Login failed';
+      showToast(msg, 'error');
+      return { success: false, error: msg };
+    }
+  };
+
+  const signUpWithEmail = async (
+    email: string,
+    password: string,
+    metadata: {
+      fullName: string;
+      phone?: string;
+      role: UserRole;
+      district?: string;
+      block?: string;
+    }
+  ): Promise<{ success: boolean; requiresEmailConfirmation: boolean; error?: string }> => {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: {
+            full_name: metadata.fullName,
+            name: metadata.fullName,
+            phone: metadata.phone || '',
+            role: metadata.role,
+            district: metadata.district || 'Ranchi',
+            block: metadata.block || 'Ranchi Sadar',
+          },
+        },
+      });
+
+      if (error) {
+        showToast(error.message, 'error');
+        return { success: false, requiresEmailConfirmation: false, error: error.message };
+      }
+
+      // Also try to insert into profiles table immediately
+      if (data.user) {
+        try {
+          await supabase.from('profiles').upsert({
+            id: data.user.id,
+            email: email.trim(),
+            full_name: metadata.fullName,
+            phone: metadata.phone || '',
+            role: metadata.role,
+            district: metadata.district || 'Ranchi',
+            block: metadata.block || 'Ranchi Sadar',
+            community_role:
+              metadata.role === 'citizen'
+                ? 'Citizen Member'
+                : metadata.role === 'university'
+                ? 'Faculty Lead'
+                : metadata.role === 'industry'
+                ? 'CSR Lead'
+                : 'District Nodal Officer',
+          });
+        } catch (_) {}
+      }
+
+      if (data.session) {
+        setSession(data.session);
+        if (data.user) {
+          await syncUserFromSupabase(data.user);
+        }
+        showToast(
+          language === 'hi' ? 'खाता सफलतापूर्वक बनाया गया!' : 'Account created successfully!',
+          'success'
+        );
+        return { success: true, requiresEmailConfirmation: false };
+      } else if (data.user) {
+        showToast(
+          language === 'hi'
+            ? 'पंजीकरण सफल! कृपया अपने ईमेल पर पुष्टि लिंक जांचें।'
+            : 'Registration recorded! Please verify your email or log in.',
+          'info'
+        );
+        return { success: true, requiresEmailConfirmation: true };
+      }
+
+      return { success: false, requiresEmailConfirmation: false, error: 'Registration failed' };
+    } catch (e: any) {
+      const msg = e?.message || 'Registration failed';
+      showToast(msg, 'error');
+      return { success: false, requiresEmailConfirmation: false, error: msg };
+    }
+  };
+
+  const loginWithMobile = async (phone: string, name?: string) => {
     setUser({
-      name: name || 'Sunita Devi',
+      name: name || 'Citizen',
       phone: phone || '+91 98351 44210',
-      email: 'citizen@samadhan.org',
+      email: '',
       communityRole: 'Citizen Member',
       district: 'Ranchi',
       block: 'Ormanjhi',
       isGuest: false,
     });
     showToast(
-      language === 'hi' ? 'सफलतापूर्वक लॉगिन हो गए!' : 'Logged in successfully!',
+      language === 'hi' ? 'सफलतापूर्वक प्रवेश किया!' : 'Logged in successfully!',
       'success'
     );
   };
@@ -879,15 +1178,50 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
-  const updateUserProfile = (profile: Partial<UserProfile>) => {
+  const updateUserProfile = async (profile: Partial<UserProfile>) => {
     setUser((prev) => ({ ...prev, ...profile }));
+
+    try {
+      if (session?.user) {
+        await supabase.auth.updateUser({
+          data: {
+            full_name: profile.name,
+            phone: profile.phone,
+            district: profile.district,
+            block: profile.block,
+            community_role: profile.communityRole,
+          },
+        });
+
+        await supabase
+          .from('profiles')
+          .update({
+            full_name: profile.name,
+            phone: profile.phone,
+            district: profile.district,
+            block: profile.block,
+            community_role: profile.communityRole,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', session.user.id);
+      }
+    } catch (e) {
+      console.warn('Error updating profile in Supabase:', e);
+    }
+
     showToast(
       language === 'hi' ? 'प्रोफ़ाइल अपडेट की गई।' : 'Profile updated successfully.',
       'success'
     );
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.warn('Error signing out of Supabase:', e);
+    }
+    setSession(null);
     setUser({
       name: 'Guest Citizen',
       phone: '',
@@ -897,6 +1231,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       block: 'Ranchi Sadar',
       isGuest: true,
     });
+    setUserRoleState('citizen');
     showToast(
       language === 'hi' ? 'आप लॉग आउट हो गए हैं।' : 'You have logged out.',
       'info'
@@ -925,6 +1260,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         lastSyncedTime,
         syncDrafts,
         user,
+        session,
+        isLoadingAuth,
+        signInWithEmail,
+        signUpWithEmail,
         updateUserProfile,
         loginWithMobile,
         continueAsGuest,
