@@ -1256,6 +1256,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const cleanEmail = email.trim();
       const role = metadata.role || 'citizen';
       const cleanName = metadata.fullName.trim();
+      const communityRole =
+        role === 'citizen'
+          ? 'Citizen Member'
+          : role === 'university'
+          ? 'Faculty / Student'
+          : role === 'industry'
+          ? 'CSR Lead'
+          : 'District Nodal Officer';
 
       const { data, error } = await supabase.auth.signUp({
         email: cleanEmail,
@@ -1268,27 +1276,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             role,
             district: metadata.district || 'Ranchi',
             block: metadata.block || 'Ranchi Sadar',
+            community_role: communityRole,
           },
         },
       });
 
       if (error) {
         let msg = error.message;
-        if (msg.toLowerCase().includes('rate limit')) {
+        if (msg.toLowerCase().includes('already registered')) {
+          const signInRes = await signInWithEmail(cleanEmail, password);
+          if (signInRes.success) {
+            showToast('Account already exists. Signed in successfully!', 'success');
+            return { success: true, requiresEmailConfirmation: false };
+          }
+          msg = 'Account already exists. Please switch to Sign In.';
+        } else if (msg.toLowerCase().includes('rate limit')) {
           msg = 'Supabase email limit exceeded. Please disable "Confirm email" in Supabase Dashboard (Auth > Providers > Email).';
         }
         showToast(msg, 'error');
         return { success: false, requiresEmailConfirmation: false, error: msg };
       }
-
-      const communityRole =
-        role === 'citizen'
-          ? 'Citizen Member'
-          : role === 'university'
-          ? 'Faculty / Student'
-          : role === 'industry'
-          ? 'CSR Lead'
-          : 'District Nodal Officer';
 
       if (data?.user?.id) {
         try {
@@ -1321,7 +1328,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       if (data?.session) {
         setSession(data.session);
-        showToast('Account created and logged in successfully!', 'success');
+        showToast('Account registered and saved to Supabase successfully!', 'success');
         return { success: true, requiresEmailConfirmation: false };
       }
 
