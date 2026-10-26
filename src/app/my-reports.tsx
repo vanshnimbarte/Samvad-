@@ -31,6 +31,7 @@ import { ReportCard } from '@/components/common/ReportCard';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { EmptyState } from '@/components/common/EmptyState';
 import { Button } from '@/components/common/Button';
+import { ReportMapView } from '@/components/common/ReportMapView';
 import { useApp } from '@/context/AppContext';
 import {
   CIVIC_CATEGORIES,
@@ -270,36 +271,23 @@ export default function MyReportsScreen() {
           {/* TAB 1: SUBMITTED REPORTS */}
           {activeTab === 'submitted' && (
             <>
-              {/* Map View Mode Simulation */}
+              {/* Real Interactive Map View */}
               {viewMode === 'map' ? (
-                <View style={styles.mapSimContainer}>
+                <View style={{ marginBottom: Spacing.xl }}>
                   <View style={styles.mapHeaderNotice}>
                     <MapIcon size={16} color={SamadhanColors.primary} />
                     <Text style={styles.mapNoticeText}>
                       {language === 'hi'
                         ? 'झारखंड सामुदायिक मानचित्र: आपकी सभी दर्ज समस्याएं पिन की गई हैं।'
-                        : 'Jharkhand Community Map: Pinning your reported issues.'}
+                        : 'Interactive Jharkhand Map: Live pins for your reported issues.'}
                     </Text>
                   </View>
 
-                  <View style={styles.mapMockArea}>
-                    {filteredReports.map((rep, idx) => (
-                      <Pressable
-                        key={rep.id}
-                        accessibilityRole="button"
-                        accessibilityLabel={`View map marker for ${rep.titleEn}`}
-                        onPress={() => router.push(`/report-detail?id=${rep.id}`)}
-                        style={[
-                          styles.mapPinBubble,
-                          { top: 40 + idx * 60, left: 30 + (idx % 2) * 120 },
-                        ]}>
-                        <StatusBadge status={rep.status} size="sm" />
-                        <Text style={styles.mapPinTitle} numberOfLines={1}>
-                          {rep.titleEn}
-                        </Text>
-                      </Pressable>
-                    ))}
-                  </View>
+                  <ReportMapView
+                    reports={filteredReports}
+                    onSelect={(id) => router.push(`/report-detail?id=${id}`)}
+                    height={360}
+                  />
                 </View>
               ) : (
                 /* List View Mode */
