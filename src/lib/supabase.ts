@@ -11,7 +11,7 @@ const supabaseKey =
   process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
   'sb_publishable_z_aMo4DrPG3vSQLcPPGrOg_pW2jZsSK';
 
-// Custom storage adapter that handles Native (SecureStore) and Web (localStorage)
+
 const ExpoStorageAdapter = {
   getItem: async (key: string): Promise<string | null> => {
     try {
@@ -72,14 +72,45 @@ export interface SupabaseUserProfile {
   role?: 'citizen' | 'university' | 'industry' | 'government';
   district?: string;
   block?: string;
+  community_role?: string;
   avatar_url?: string;
   created_at?: string;
   updated_at?: string;
 }
 
-// ==============================================================================
-// DATABASE HELPERS FOR CHALLENGES
-// ==============================================================================
+const USER_SESSION_KEY = 'SAMVAD_SAVED_USER_SESSION_V2';
+
+export async function saveLocalUserProfile(profile: any, role: string): Promise<void> {
+  try {
+    const jsonStr = JSON.stringify({ profile, role, savedAt: Date.now() });
+    await ExpoStorageAdapter.setItem(USER_SESSION_KEY, jsonStr);
+  } catch (err) {
+    console.warn('Failed to save local user profile:', err);
+  }
+}
+
+export async function getLocalUserProfile(): Promise<{ profile: any; role: string } | null> {
+  try {
+    const str = await ExpoStorageAdapter.getItem(USER_SESSION_KEY);
+    if (!str) return null;
+    return JSON.parse(str);
+  } catch (err) {
+    console.warn('Failed to get local user profile:', err);
+    return null;
+  }
+}
+
+export async function clearLocalUserProfile(): Promise<void> {
+  try {
+    await ExpoStorageAdapter.removeItem(USER_SESSION_KEY);
+  } catch (err) {
+    console.warn('Failed to clear local user profile:', err);
+  }
+}
+
+
+
+
 
 export async function fetchChallengesFromSupabase(): Promise<Challenge[] | null> {
   try {
@@ -179,9 +210,9 @@ export async function insertChallengeToSupabase(challenge: Challenge, userId?: s
   }
 }
 
-// ==============================================================================
-// DATABASE HELPERS FOR CIVIC REPORTS
-// ==============================================================================
+
+
+
 
 export async function fetchReportsFromSupabase(): Promise<CivicReport[] | null> {
   try {
@@ -262,9 +293,9 @@ export async function insertReportToSupabase(report: CivicReport, userId?: strin
   }
 }
 
-// ==============================================================================
-// COMMENTS & UPVOTES HELPERS
-// ==============================================================================
+
+
+
 
 export async function insertChallengeCommentToSupabase(
   challengeId: string,

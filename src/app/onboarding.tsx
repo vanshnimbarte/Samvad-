@@ -29,7 +29,7 @@ import {
 
 export default function OnboardingScreen() {
   const router = useRouter();
-  const { language, setLanguage, fontScale } = useApp();
+  const { fontScale } = useApp();
 
   const [currentSlide, setCurrentSlide] = useState(0);
 
@@ -38,28 +38,22 @@ export default function OnboardingScreen() {
       icon: MessageSquarePlus,
       color: SamadhanColors.action,
       bg: '#FFF7ED',
-      titleEn: 'Report problems in your community',
-      titleHi: 'अपने समुदाय की समस्याएं दर्ज करें',
-      descEn: 'Tell us about issues affecting your village, town, or neighborhood in less than three minutes.',
-      descHi: 'अपने गांव, कस्बे या वार्ड की समस्या को 3 मिनट से भी कम समय में दर्ज करें।',
+      title: 'Report problems in your community',
+      desc: 'Tell us about issues affecting your village, town, or neighborhood in less than three minutes.',
     },
     {
       icon: Activity,
       color: SamadhanColors.primary,
       bg: '#EFF6FF',
-      titleEn: 'Track every update',
-      titleHi: 'हर प्रगति व चरण को ट्रैक करें',
-      descEn: 'Follow your report across 7 transparent resolution milestones from submission to verified completion.',
-      descHi: 'प्रविष्टि से लेकर समाधान तक, 7 पारदर्शी चरणों में अपनी रिपोर्ट की स्थिति देखें।',
+      title: 'Track every update',
+      desc: 'Follow your report across 7 transparent resolution milestones from submission to verified completion.',
     },
     {
       icon: HeartHandshake,
       color: SamadhanColors.secondary,
       bg: '#F0FDFA',
-      titleEn: 'Help create real impact',
-      titleHi: 'ज़मीनी बदलाव में भागीदार बनें',
-      descEn: 'Connect communities with people, departments, and organizations working on solutions.',
-      descHi: 'स्थानीय समस्याओं को समाधान कर्ताओं और संबंधित सरकारी विभागों से जोड़ें।',
+      title: 'Help create real impact',
+      desc: 'Connect communities with people, departments, and organizations working on solutions.',
     },
   ];
 
@@ -80,52 +74,15 @@ export default function OnboardingScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Top Controls: Language Switch & Skip */}
+      {/* Top Controls: Skip */}
       <View style={styles.topRow}>
-        <View style={styles.langPills}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Set language to English"
-            onPress={() => setLanguage('en')}
-            style={[
-              styles.langPill,
-              language === 'en' && styles.langPillActive,
-            ]}>
-            <Text
-              style={[
-                styles.langPillText,
-                language === 'en' && styles.langPillTextActive,
-              ]}>
-              English
-            </Text>
-          </Pressable>
-
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Set language to Hindi"
-            onPress={() => setLanguage('hi')}
-            style={[
-              styles.langPill,
-              language === 'hi' && styles.langPillActive,
-            ]}>
-            <Text
-              style={[
-                styles.langPillText,
-                language === 'hi' && styles.langPillTextActive,
-              ]}>
-              हिन्दी
-            </Text>
-          </Pressable>
-        </View>
-
+        <View />
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Skip onboarding"
           onPress={handleSkip}
           style={styles.skipBtn}>
-          <Text style={styles.skipText}>
-            {language === 'hi' ? 'छोड़ें (Skip)' : 'Skip'}
-          </Text>
+          <Text style={styles.skipText}>Skip</Text>
         </Pressable>
       </View>
 
@@ -140,7 +97,7 @@ export default function OnboardingScreen() {
           <View style={styles.communityTag}>
             <Sparkles size={12} color={activeSlideData.color} />
             <Text style={[styles.communityTagText, { color: activeSlideData.color }]}>
-              {language === 'hi' ? 'नागरिक सशक्तिकरण' : 'Citizen Empowerment'}
+              Citizen Empowerment
             </Text>
           </View>
         </View>
@@ -148,11 +105,11 @@ export default function OnboardingScreen() {
         {/* Text Content */}
         <View style={styles.textContainer}>
           <Text style={[styles.slideTitle, { fontSize: 22 * fontScale }]}>
-            {language === 'hi' ? activeSlideData.titleHi : activeSlideData.titleEn}
+            {activeSlideData.title}
           </Text>
 
           <Text style={[styles.slideDesc, { fontSize: 14 * fontScale }]}>
-            {language === 'hi' ? activeSlideData.descHi : activeSlideData.descEn}
+            {activeSlideData.desc}
           </Text>
         </View>
 
@@ -173,15 +130,7 @@ export default function OnboardingScreen() {
       {/* Bottom CTA Button */}
       <View style={styles.footer}>
         <Button
-          title={
-            currentSlide === slides.length - 1
-              ? language === 'hi'
-                ? 'आरंभ करें (Get Started)'
-                : 'Get Started'
-              : language === 'hi'
-              ? 'आगे बढ़ें (Next)'
-              : 'Next'
-          }
+          title={currentSlide === slides.length - 1 ? 'Get Started' : 'Next'}
           onPress={handleNext}
           variant="action"
           size="lg"

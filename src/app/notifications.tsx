@@ -111,8 +111,7 @@ export default function NotificationsScreen() {
                   styles.tabPillText,
                   activeFilter === 'all' && styles.tabPillTextActive,
                 ]}>
-                {language === 'hi' ? 'सभी सूचनाएं' : 'All Alerts'} (
-                {notifications.length})
+                All Alerts ({notifications.length})
               </Text>
             </Pressable>
 
@@ -129,8 +128,7 @@ export default function NotificationsScreen() {
                   styles.tabPillText,
                   activeFilter === 'unread' && styles.tabPillTextActive,
                 ]}>
-                {language === 'hi' ? 'अपठित' : 'Unread'} (
-                {unreadNotificationCount})
+                Unread ({unreadNotificationCount})
               </Text>
             </Pressable>
           </View>
@@ -143,7 +141,7 @@ export default function NotificationsScreen() {
               style={styles.markReadBtn}>
               <Check size={14} color={SamadhanColors.primary} />
               <Text style={styles.markReadText}>
-                {language === 'hi' ? 'सब पढ़ा चिह्नित करें' : 'Mark all read'}
+                Mark all read
               </Text>
             </Pressable>
           )}
@@ -156,8 +154,8 @@ export default function NotificationsScreen() {
           showsVerticalScrollIndicator={false}>
           {filteredNotifications.length > 0 ? (
             filteredNotifications.map((item) => {
-              const title = language === 'hi' ? item.titleHi : item.titleEn;
-              const message = language === 'hi' ? item.messageHi : item.messageEn;
+              const title = item.titleEn;
+              const message = item.messageEn;
 
               return (
                 <Pressable
@@ -208,19 +206,11 @@ export default function NotificationsScreen() {
               icon={BellOff}
               title={
                 activeFilter === 'unread'
-                  ? language === 'hi'
-                    ? 'कोई अपठित सूचना नहीं है'
-                    : 'No unread notifications'
-                  : language === 'hi'
-                  ? 'कोई सूचना उपलब्ध नहीं है'
+                  ? 'No unread notifications'
                   : 'No notifications available'
               }
-              description={
-                language === 'hi'
-                  ? 'जब आपकी दर्ज रिपोर्ट पर कोई प्रगति या नया अपडेट होगा, तो सूचना यहां दिखेगी।'
-                  : 'Milestone progress updates and alerts will appear here.'
-              }
-              actionTitle={activeFilter === 'unread' ? 'सभी सूचनाएं देखें' : undefined}
+              description="Milestone progress updates and alerts will appear here."
+              actionTitle={activeFilter === 'unread' ? 'View all alerts' : undefined}
               onActionPress={() => setActiveFilter('all')}
             />
           )}

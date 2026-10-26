@@ -22,13 +22,9 @@ export default function ChallengeMapScreen() {
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
-        <Text style={styles.kicker}>
-          {language === 'hi' ? 'झारखंड चुनौती मानचित्र' : 'Jharkhand challenge map'}
-        </Text>
+        <Text style={styles.kicker}>Jharkhand challenge map</Text>
         <Text style={styles.hint}>
-          {language === 'hi'
-            ? 'नक्शे पर किसी भी पिन को दबाकर समस्या की जांच करें व समाधान ट्रैक करें।'
-            : 'Tap any district pin on the map to inspect challenges and track innovation solutions.'}
+          Tap any district pin on the map to inspect challenges and track innovation solutions.
         </Text>
         <ChallengeMapView
           challenges={challenges}

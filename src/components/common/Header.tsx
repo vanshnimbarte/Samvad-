@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 import {
   MapPin,
   Bell,
-  Languages,
   WifiOff,
 } from 'lucide-react-native';
 import { useApp } from '@/context/AppContext';
@@ -21,17 +20,11 @@ export function Header({ title, subtitle, showBack = false, onBackPress }: Heade
   const router = useRouter();
   const {
     user,
-    language,
-    setLanguage,
     t,
     fontScale,
     unreadNotificationCount,
     networkStatus,
   } = useApp();
-
-  const toggleLanguage = () => {
-    setLanguage(language === 'en' ? 'hi' : 'en');
-  };
 
   const isOffline = networkStatus === 'offline';
   const isSlow = networkStatus === 'slow';
@@ -52,11 +45,7 @@ export function Header({ title, subtitle, showBack = false, onBackPress }: Heade
               { color: isOffline ? '#991B1B' : '#92400E' },
             ]}>
             {isOffline
-              ? language === 'hi'
-                ? 'ऑफ़लाइन मोड (ड्राफ्ट फोन में सुरक्षित रहेंगे)'
-                : 'Offline Mode (Drafts saved locally)'
-              : language === 'hi'
-              ? 'धीमा इंटरनेट कनेक्शन (डेटा बचत सक्रिय)'
+              ? 'Offline Mode (Drafts saved locally)'
               : 'Slow Connection (Data-saver active)'}
           </Text>
         </View>
@@ -67,7 +56,7 @@ export function Header({ title, subtitle, showBack = false, onBackPress }: Heade
         <View style={styles.leftCol}>
           <Text style={[styles.greetingText, { fontSize: 13 * fontScale }]}>
             {t('greeting')},{' '}
-            <Text style={styles.userName}>{user.isGuest ? (language === 'hi' ? 'नागरिक' : 'Citizen') : user.name.split(' ')[0]}</Text>
+            <Text style={styles.userName}>{user.isGuest ? 'Citizen' : user.name.split(' ')[0]}</Text>
           </Text>
 
           <View style={styles.locationRow}>
@@ -80,23 +69,8 @@ export function Header({ title, subtitle, showBack = false, onBackPress }: Heade
           </View>
         </View>
 
-        {/* Right Side: Language Toggle & Notification Bell */}
+        {/* Right Side: Notification Bell */}
         <View style={styles.rightCol}>
-          {/* Language Switcher Button */}
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Switch Language"
-            onPress={toggleLanguage}
-            style={({ pressed }) => [
-              styles.langButton,
-              pressed && styles.buttonPressed,
-            ]}>
-            <Languages size={15} color={SamadhanColors.primary} />
-            <Text style={styles.langButtonText}>
-              {language === 'en' ? 'हिन्दी' : 'English'}
-            </Text>
-          </Pressable>
-
           {/* Notifications Button */}
           <Pressable
             accessibilityRole="button"
@@ -174,25 +148,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-  },
-  langButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingVertical: 7,
-    paddingHorizontal: 12,
-    borderRadius: Radius.full,
-    backgroundColor: SamadhanColors.primarySurface,
-    borderWidth: 1,
-    borderColor: '#BFDBFE',
-    minHeight: 44, // WCAG AA Touch target
-    minWidth: 44,
-    justifyContent: 'center',
-  },
-  langButtonText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: SamadhanColors.primary,
   },
   iconButton: {
     width: 44,

@@ -21,12 +21,10 @@ export default function DashboardScreen() {
       <Header />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={[styles.h1, { fontSize: 18 * fontScale }]}>
-          {language === 'hi' ? 'सरकारी एनालिटिक्स' : 'Government analytics'}
+          Government analytics
         </Text>
         <Text style={styles.sub}>
-          {language === 'hi'
-            ? 'चुनौतियां, HEI भागीदारी, उद्योग सहयोग और सामाजिक प्रभाव।'
-            : 'Live view of challenges, HEI participation, industry collaboration, and social outcomes.'}
+          Live view of challenges, HEI participation, industry collaboration, and social outcomes.
         </Text>
 
         <View style={styles.kpiGrid}>
@@ -38,7 +36,7 @@ export default function DashboardScreen() {
           <Kpi label="Startups" value={String(HEADLINE_KPIS.startupsCreated)} />
         </View>
 
-        <Text style={styles.h2}>{language === 'hi' ? 'मासिक प्रवृत्ति' : 'Monthly trend'}</Text>
+        <Text style={styles.h2}>Monthly trend</Text>
         <View style={styles.trendRow}>
           {MONTHLY_TREND.map((m) => (
             <View key={m.month} style={styles.trendCol}>
@@ -50,7 +48,7 @@ export default function DashboardScreen() {
           ))}
         </View>
 
-        <Text style={styles.h2}>{language === 'hi' ? 'डोमेन वितरण' : 'Domain mix'}</Text>
+        <Text style={styles.h2}>Domain mix</Text>
         {DOMAIN_STATS.map((d) => (
           <View key={d.domain} style={styles.domainRow}>
             <Text style={styles.domainName}>{d.icon} {d.domain}</Text>
@@ -58,7 +56,7 @@ export default function DashboardScreen() {
           </View>
         ))}
 
-        <Text style={styles.h2}>{language === 'hi' ? 'HEI प्रदर्शन' : 'HEI performance'}</Text>
+        <Text style={styles.h2}>HEI performance</Text>
         {HEI_PERFORMANCE.map((h) => (
           <View key={h.heiId} style={styles.heiRow}>
             <Text style={styles.heiName}>{h.shortName}</Text>
@@ -66,7 +64,7 @@ export default function DashboardScreen() {
           </View>
         ))}
 
-        <Text style={styles.h2}>{language === 'hi' ? 'जिला तीव्रता' : 'District intensity'}</Text>
+        <Text style={styles.h2}>District intensity</Text>
         {DISTRICT_STATS.slice(0, 10).map((d) => (
           <View key={d.district} style={styles.heiRow}>
             <Text style={styles.heiName}>{d.district}</Text>

@@ -20,12 +20,12 @@ export default function EcosystemScreen() {
       <View style={styles.toggle}>
         <Pressable onPress={() => setTab('hei')} style={[styles.toggleBtn, tab === 'hei' && styles.toggleActive]}>
           <Text style={[styles.toggleText, tab === 'hei' && styles.toggleTextActive]}>
-            {language === 'hi' ? 'विश्वविद्यालय' : 'Universities'}
+            Universities
           </Text>
         </Pressable>
         <Pressable onPress={() => setTab('industry')} style={[styles.toggleBtn, tab === 'industry' && styles.toggleActive]}>
           <Text style={[styles.toggleText, tab === 'industry' && styles.toggleTextActive]}>
-            {language === 'hi' ? 'उद्योग साझेदार' : 'Industry partners'}
+            Industry partners
           </Text>
         </Pressable>
       </View>

@@ -11,6 +11,9 @@ import {
   toggleChallengeUpvoteInSupabase,
   toggleReportSupportInSupabase,
   updateChallengeInSupabase,
+  saveLocalUserProfile,
+  getLocalUserProfile,
+  clearLocalUserProfile,
 } from '@/lib/supabase';
 import {
   loadSavedDrafts,
@@ -79,12 +82,12 @@ interface ToastState {
 }
 
 interface AppContextType {
-  // Localization & Translations
+
   language: Language;
   setLanguage: (lang: Language) => void;
   t: (key: keyof typeof TRANSLATIONS.en) => string;
 
-  // Accessibility & Preferences
+
   textSize: TextSize;
   setTextSize: (size: TextSize) => void;
   fontScale: number;
@@ -97,18 +100,25 @@ interface AppContextType {
   voiceInputEnabled: boolean;
   setVoiceInputEnabled: (v: boolean) => void;
 
-  // Network Simulation
+
   networkStatus: NetworkStatus;
   setNetworkStatus: (status: NetworkStatus) => void;
   lastSyncedTime: string;
   syncDrafts: () => Promise<void>;
 
-  // User Authentication
+
   user: UserProfile;
   session: Session | null;
   isLoadingAuth: boolean;
   updateUserProfile: (profile: Partial<UserProfile>) => Promise<void>;
-  loginWithMobile: (phone: string, name?: string) => Promise<void>;
+  loginWithMobile: (
+    phone: string,
+    name?: string,
+    role?: UserRole,
+    organization?: string,
+    district?: string,
+    block?: string
+  ) => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signUpWithEmail: (
     email: string,
@@ -126,7 +136,7 @@ interface AppContextType {
   userRole: UserRole;
   setUserRole: (role: UserRole) => void;
 
-  // Reports
+
   reports: CivicReport[];
   drafts: DraftReport[];
   getReportById: (id: string) => CivicReport | undefined;
@@ -134,25 +144,25 @@ interface AppContextType {
   saveNewDraft: (draftData: Partial<DraftReport>) => string;
   deleteDraft: (draftId: string) => void;
 
-  // Problem Supporting (Upvoting)
+
   supportedProblemIds: Record<string, boolean>;
   toggleSupportProblem: (reportId: string) => void;
   hasSupportedProblem: (reportId: string) => boolean;
 
-  // Updates & Comments
+
   requestReportUpdate: (reportId: string) => void;
   addReportComment: (reportId: string, comment: string) => void;
 
-  // Notifications
+
   notifications: CivicNotification[];
   unreadNotificationCount: number;
   markNotificationAsRead: (id: string) => void;
   markAllNotificationsAsRead: () => void;
 
-  // Success Story
+
   featuredStory: SuccessStory;
 
-  // Societal innovation portal
+
   challenges: Challenge[];
   getChallengeById: (id: string) => Challenge | undefined;
   submitChallenge: (input: {
@@ -175,7 +185,7 @@ interface AppContextType {
   offerIndustrySupport: (id: string, partnerId: string, kind: 'Funding' | 'Mentoring' | 'Prototyping' | 'Pilot Testing' | 'Tech Transfer') => void;
   toggleMilestone: (id: string, milestoneId: string) => void;
 
-  // Toast System
+
   toast: ToastState;
   showToast: (message: string, type?: 'success' | 'info' | 'error') => void;
   hideToast: () => void;
@@ -183,37 +193,37 @@ interface AppContextType {
 
 const ROLE_PROFILES: Record<UserRole, UserProfile> = {
   citizen: {
-    name: 'Sunita Devi',
-    phone: '+91 98351 44210',
-    email: 'sunita.shg@samadhan.org',
-    communityRole: 'Secretary, Mahila Kalyan SHG',
+    name: 'Citizen Member',
+    phone: '',
+    email: '',
+    communityRole: 'Citizen Member',
     district: 'Ranchi',
     block: 'Ormanjhi',
     isGuest: false,
   },
   university: {
-    name: 'Dr. Anjali Singh',
-    phone: '+91 94311 20560',
-    email: 'anjali.singh@bitmesra.ac.in',
-    communityRole: 'Faculty Lead, IoT & Innovation Centre (BIT Mesra)',
+    name: 'University Faculty / Student',
+    phone: '',
+    email: '',
+    communityRole: 'Faculty / Student (Jharkhand University)',
     district: 'Ranchi',
-    block: 'Kanke',
+    block: 'Ranchi Sadar',
     isGuest: false,
   },
   industry: {
-    name: 'Rajiv Sharma',
-    phone: '+91 97714 88320',
-    email: 'csr.lead@tatasteel.com',
-    communityRole: 'Head of CSR Partnerships (Tata Steel)',
+    name: 'Industry Partner',
+    phone: '',
+    email: '',
+    communityRole: 'CSR / Innovation Partner',
     district: 'East Singhbhum',
     block: 'Jamshedpur',
     isGuest: false,
   },
   government: {
-    name: 'Amit Verma, IAS',
-    phone: '+91 94300 11223',
-    email: 'nodal.officer@jharkhand.gov.in',
-    communityRole: 'District Nodal Officer, Societal Innovation Mission',
+    name: 'District Administration',
+    phone: '',
+    email: '',
+    communityRole: 'District Nodal Officer',
     district: 'Ranchi',
     block: 'Ranchi Sadar',
     isGuest: false,
@@ -225,21 +235,21 @@ const DEFAULT_USER = ROLE_PROFILES.citizen;
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  // Locale
+
   const [language, setLanguage] = useState<Language>('en');
 
-  // Accessibility
+
   const [textSize, setTextSize] = useState<TextSize>('normal');
   const [highContrast, setHighContrast] = useState<boolean>(false);
   const [reducedMotion, setReducedMotion] = useState<boolean>(false);
   const [dataSavingMode, setDataSavingMode] = useState<boolean>(false);
   const [voiceInputEnabled, setVoiceInputEnabled] = useState<boolean>(true);
 
-  // Network
+
   const [networkStatus, setNetworkStatus] = useState<NetworkStatus>('online');
   const [lastSyncedTime, setLastSyncedTime] = useState<string>('Just now');
 
-  // User
+
   const [user, setUser] = useState<UserProfile>(DEFAULT_USER);
   const [userRole, setUserRoleState] = useState<UserRole>('citizen');
   const [session, setSession] = useState<Session | null>(null);
@@ -287,7 +297,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         isGuest: false,
       });
 
-      // If profiles table exists and profile row doesn't, try to insert it
+
       if (!profileData) {
         try {
           await supabase.from('profiles').upsert({
@@ -322,23 +332,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    // Check active session from storage
+
     supabase.auth
       .getSession()
-      .then(({ data: { session: existingSession } }) => {
+      .then(async ({ data: { session: existingSession } }) => {
         if (!mounted) return;
         setSession(existingSession);
         if (existingSession?.user) {
-          syncUserFromSupabase(existingSession.user);
+          await syncUserFromSupabase(existingSession.user);
+        } else {
+
+          const localStored = await getLocalUserProfile();
+          if (localStored?.profile && mounted) {
+            setUser(localStored.profile);
+            setUserRoleState((localStored.role || 'citizen') as UserRole);
+          }
         }
         setIsLoadingAuth(false);
       })
-      .catch((err) => {
+      .catch(async (err) => {
         console.warn('Supabase getSession error:', err);
+        const localStored = await getLocalUserProfile();
+        if (localStored?.profile && mounted) {
+          setUser(localStored.profile);
+          setUserRoleState((localStored.role || 'citizen') as UserRole);
+        }
         if (mounted) setIsLoadingAuth(false);
       });
 
-    // Listen for auth state changes (login, logout, token refresh)
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
@@ -360,7 +382,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    // Fetch challenges and reports from Supabase if available
+
     fetchChallengesFromSupabase().then((sbChallenges) => {
       if (!mounted || !sbChallenges || sbChallenges.length === 0) return;
       setChallenges((prev) => {
@@ -379,7 +401,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       });
     });
 
-    // Load saved drafts from offline storage
+
     loadSavedDrafts().then((savedDrafts) => {
       if (!mounted || !savedDrafts || savedDrafts.length === 0) return;
       setDrafts((prev) => {
@@ -389,7 +411,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       });
     });
 
-    // Load persisted supported problems
+
     loadSupportedProblems().then((savedSupports) => {
       if (!mounted || !savedSupports) return;
       setSupportedProblemIds((prev) => ({ ...prev, ...savedSupports }));
@@ -403,13 +425,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const setUserRole = (role: UserRole) => {
     setUserRoleState(role);
-    if (ROLE_PROFILES[role]) {
-      setUser(ROLE_PROFILES[role]);
-    }
+    setUser((prev) => {
+      if (prev && prev.name && prev.name !== 'Guest Citizen' && !prev.isGuest) {
+        const updated = {
+          ...prev,
+          communityRole:
+            role === 'university'
+              ? (prev.communityRole?.includes('University') || prev.communityRole?.includes('Faculty') || prev.communityRole?.includes('BIT') || prev.communityRole?.includes('IIT')
+                  ? prev.communityRole
+                  : 'Faculty / Student')
+              : role === 'citizen'
+              ? 'Citizen Member'
+              : role === 'industry'
+              ? 'CSR Lead'
+              : 'District Nodal Officer',
+        };
+        saveLocalUserProfile(updated, role);
+        return updated;
+      }
+      return ROLE_PROFILES[role] || prev;
+    });
   };
   const [challenges, setChallenges] = useState<Challenge[]>(() => enrichChallenges(CHALLENGES_DATA));
 
-  // Reports & Drafts
+
   const [reports, setReports] = useState<CivicReport[]>(INITIAL_REPORTS);
   const [drafts, setDrafts] = useState<DraftReport[]>([
     {
@@ -432,31 +471,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     },
   ]);
 
-  // Support Upvotes
+
   const [supportedProblemIds, setSupportedProblemIds] = useState<Record<string, boolean>>({
     'SC-JH-84920': true,
     'SC-JH-84924': true,
   });
 
-  // Notifications
+
   const [notifications, setNotifications] = useState<CivicNotification[]>(INITIAL_NOTIFICATIONS);
 
-  // Toast
+
   const [toast, setToast] = useState<ToastState>({
     visible: false,
     message: '',
     type: 'info',
   });
 
-  // Derived font scale
+
   const fontScale = textSize === 'small' ? 0.9 : textSize === 'large' ? 1.18 : 1.0;
 
-  // Translation helper
+
   const t = (key: keyof typeof TRANSLATIONS.en): string => {
     return TRANSLATIONS[language][key] || TRANSLATIONS.en[key] || '';
   };
 
-  // Toast helper
+
   const showToast = (message: string, type: 'success' | 'info' | 'error' = 'info') => {
     setToast({ visible: true, message, type });
     setTimeout(() => {
@@ -466,7 +505,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const hideToast = () => setToast((prev) => ({ ...prev, visible: false }));
 
-  // Upvoting logic
+
   const toggleSupportProblem = (reportId: string) => {
     const currentlySupported = !!supportedProblemIds[reportId];
     const newSupports = {
@@ -496,11 +535,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     showToast(
       currentlySupported
-        ? language === 'hi'
-          ? 'समर्थन हटाया गया'
-          : 'Support removed'
-        : language === 'hi'
-        ? 'आपने इस समस्या का समर्थन किया है!'
+        ? 'Support removed'
         : 'You supported this problem!',
       'success'
     );
@@ -510,7 +545,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return !!supportedProblemIds[reportId];
   };
 
-  // Submit report
+
   const submitNewReport = (reportData: Partial<CivicReport>): string => {
     const randomNum = Math.floor(10000 + Math.random() * 90000);
     const newId = `SC-JH-${randomNum}`;
@@ -635,10 +670,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     setReports((prev) => [newReport, ...prev]);
 
-    // Persist to Supabase
+
     insertReportToSupabase(newReport, session?.user?.id);
 
-    // Also inject a notification
+
     const newNotif: CivicNotification = {
       id: `n-${Date.now()}`,
       type: 'report_received',
@@ -656,7 +691,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return newId;
   };
 
-  // Save draft
+
   const saveNewDraft = (draftData: Partial<DraftReport>): string => {
     const draftId = `DRAFT-JH-${Math.floor(10 + Math.random() * 90)}`;
     const newDraft: DraftReport = {
@@ -683,12 +718,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       persistDrafts(updated);
       return updated;
     });
-    showToast(
-      language === 'hi'
-        ? 'ड्राफ्ट फोन में सुरक्षित सहेजा गया।'
-        : 'Draft saved securely on this device.',
-      'info'
-    );
+    showToast('Draft saved securely on this device.', 'info');
     return draftId;
   };
 
@@ -698,32 +728,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       persistDrafts(updated);
       return updated;
     });
-    showToast(
-      language === 'hi' ? 'ड्राफ्ट हटा दिया गया।' : 'Draft deleted.',
-      'info'
-    );
+    showToast('Draft deleted.', 'info');
   };
 
-  // Sync drafts when online
+
   const syncDrafts = async () => {
     if (drafts.length === 0) {
-      showToast(
-        language === 'hi' ? 'कोई लंबित ड्राफ्ट नहीं है।' : 'No pending drafts to sync.',
-        'info'
-      );
+      showToast('No pending drafts to sync.', 'info');
       return;
     }
 
     setNetworkStatus('syncing');
-    showToast(
-      language === 'hi' ? 'ड्राफ्ट्स सर्वर के साथ सिंक हो रहे हैं...' : 'Syncing drafts with server...',
-      'info'
-    );
+    showToast('Syncing drafts with server...', 'info');
 
-    // Simulate network delay
+
     await new Promise((r) => setTimeout(r, 2000));
 
-    // Convert drafts to reports
+
     drafts.forEach((draft) => {
       submitNewReport({
         titleEn: draft.title,
@@ -755,12 +776,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setDrafts([]);
     setNetworkStatus('online');
     setLastSyncedTime('Just now');
-    showToast(
-      language === 'hi'
-        ? 'सभी ड्राफ्ट्स सफलतापूर्वक अपलोड हो गए!'
-        : 'All drafts synchronized successfully!',
-      'success'
-    );
+    showToast('All drafts synchronized successfully!', 'success');
   };
 
   const getReportById = (id: string): CivicReport | undefined => {
@@ -768,12 +784,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const requestReportUpdate = (reportId: string) => {
-    showToast(
-      language === 'hi'
-        ? 'अपडेट का अनुरोध नोडल अधिकारी को भेज दिया गया है।'
-        : 'Update request sent to nodal field team.',
-      'success'
-    );
+    showToast('Update request sent to nodal field team.', 'success');
   };
 
   const addReportComment = (reportId: string, comment: string) => {
@@ -805,13 +816,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       user.isGuest ? 'Community Member' : user.communityRole,
       session?.user?.id
     );
-    showToast(
-      language === 'hi' ? 'आपकी टिप्पणी दर्ज की गई।' : 'Your comment was posted.',
-      'success'
-    );
+    showToast('Your comment was posted.', 'success');
   };
 
-  // Notifications actions
+
   const markNotificationAsRead = (id: string) => {
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
@@ -820,12 +828,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const markAllNotificationsAsRead = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-    showToast(
-      language === 'hi'
-        ? 'सभी सूचनाएं पढ़ी हुई चिह्नित की गईं।'
-        : 'All notifications marked as read.',
-      'info'
-    );
+    showToast('All notifications marked as read.', 'info');
   };
 
   const unreadNotificationCount = notifications.filter((n) => !n.isRead).length;
@@ -895,7 +898,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
     setChallenges((prev) => [created, ...prev]);
 
-    // Persist to Supabase
+
     insertChallengeToSupabase(created, session?.user?.id);
 
     pushPortalNote(
@@ -1015,7 +1018,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const acceptChallenge = (id: string) => {
     let assignedData: any = null;
-    const defaultUni = UNIVERSITIES_DATA.find((u) => u.name.includes('BIT Mesra') || u.shortName.includes('BIT Mesra')) || UNIVERSITIES_DATA[0];
+    const userOrg = user.communityRole || '';
+    const defaultUni =
+      UNIVERSITIES_DATA.find(
+        (u) =>
+          userOrg.toLowerCase().includes(u.shortName.toLowerCase()) ||
+          userOrg.toLowerCase().includes(u.name.toLowerCase())
+      ) || UNIVERSITIES_DATA[0];
 
     setChallenges((prev) =>
       prev.map((c) => {
@@ -1024,7 +1033,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           heiId: defaultUni.id,
           heiName: defaultUni.name,
           shortName: defaultUni.shortName,
-          facultyLead: user.name || 'Dr. Anjali Singh',
+          facultyLead: user.name || 'University Faculty Lead',
           disciplines: defaultUni.disciplines.slice(0, 3),
           proposalSubmitted: false,
           teamSize: 4,
@@ -1047,11 +1056,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const formProjectTeam = (id: string) => {
     let assignedData: any = null;
-    const defaultUni = UNIVERSITIES_DATA.find((u) => u.name.includes('BIT Mesra') || u.shortName.includes('BIT Mesra')) || UNIVERSITIES_DATA[0];
+    const userOrg = user.communityRole || '';
+    const defaultUni =
+      UNIVERSITIES_DATA.find(
+        (u) =>
+          userOrg.toLowerCase().includes(u.shortName.toLowerCase()) ||
+          userOrg.toLowerCase().includes(u.name.toLowerCase())
+      ) || UNIVERSITIES_DATA[0];
 
     setChallenges((prev) =>
       prev.map((c) => {
         if (c.id !== id) return c;
+        const lead = user.name || c.assignedUniversity?.facultyLead || 'University Faculty Lead';
         assignedData = {
           ...(c.assignedUniversity || {
             heiId: defaultUni.id,
@@ -1060,17 +1076,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             disciplines: defaultUni.disciplines.slice(0, 3),
             proposalSubmitted: false,
           }),
-          facultyLead: user.name || c.assignedUniversity?.facultyLead || 'Dr. Anjali Singh',
+          facultyLead: lead,
           teamSize: 8,
         };
         return {
           ...c,
           assignedUniversity: assignedData,
           teamMembers: [
-            { name: assignedData.facultyLead || 'Faculty mentor', role: 'Faculty mentor', discipline: assignedData.disciplines?.[0] || c.domain },
-            { name: 'Ananya Kujur', role: 'Student lead', discipline: 'Computer Science' },
-            { name: 'Ravi Oraon', role: 'Field researcher', discipline: 'Public Health' },
-            { name: 'Meera Toppo', role: 'Prototype engineer', discipline: 'Electronics' },
+            { name: lead, role: 'Faculty Mentor / Project Lead', discipline: assignedData.disciplines?.[0] || c.domain },
+            { name: 'Research Scholar', role: 'Student Lead', discipline: 'Engineering' },
+            { name: 'Field Investigator', role: 'Field Researcher', discipline: 'Community Engagement' },
+            { name: 'Technical Associate', role: 'Prototype Engineer', discipline: 'Applied Technology' },
           ],
         };
       })
@@ -1078,12 +1094,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (assignedData) {
       updateChallengeInSupabase(id, { assigned_university: assignedData });
     }
-    showToast('Multidisciplinary student-faculty team constituted.', 'success');
+    showToast('Project team constituted.', 'success');
   };
 
   const submitProposal = (id: string) => {
     let assignedData: any = null;
-    const defaultUni = UNIVERSITIES_DATA.find((u) => u.name.includes('BIT Mesra') || u.shortName.includes('BIT Mesra')) || UNIVERSITIES_DATA[0];
+    const userOrg = user.communityRole || '';
+    const defaultUni =
+      UNIVERSITIES_DATA.find(
+        (u) =>
+          userOrg.toLowerCase().includes(u.shortName.toLowerCase()) ||
+          userOrg.toLowerCase().includes(u.name.toLowerCase())
+      ) || UNIVERSITIES_DATA[0];
 
     setChallenges((prev) =>
       prev.map((c) => {
@@ -1093,7 +1115,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             heiId: defaultUni.id,
             heiName: defaultUni.name,
             shortName: defaultUni.shortName,
-            facultyLead: user.name || 'Dr. Anjali Singh',
+            facultyLead: user.name || 'University Faculty Lead',
             disciplines: defaultUni.disciplines.slice(0, 3),
             teamSize: 8,
           }),
@@ -1112,7 +1134,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       progress_percent: 45,
       ...(assignedData ? { assigned_university: assignedData } : {}),
     });
-    pushPortalNote('Solution proposal submitted', 'The HEI uploaded a research/innovation proposal for review.', `/challenge-detail?id=${id}`);
+    pushPortalNote('Solution proposal submitted', 'The HEI uploaded an innovation proposal for review.', `/challenge-detail?id=${id}`);
     showToast('Proposal submitted to the portal.', 'success');
   };
 
@@ -1175,32 +1197,52 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  // Auth actions
+
   const signInWithEmail = async (
     email: string,
     password: string
   ): Promise<{ success: boolean; error?: string }> => {
     try {
+      const cleanEmail = email.trim();
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
+        email: cleanEmail,
         password,
       });
+
+      if (data?.session && data?.user) {
+        setSession(data.session);
+        await syncUserFromSupabase(data.user);
+        showToast('Logged in successfully!', 'success');
+        return { success: true };
+      }
+
+      const { data: profileRow } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('email', cleanEmail)
+        .maybeSingle();
+
+      if (profileRow) {
+        const role = (profileRow.role || 'citizen') as UserRole;
+        const userObj: UserProfile = {
+          name: profileRow.full_name || cleanEmail.split('@')[0],
+          phone: profileRow.phone || '',
+          email: cleanEmail,
+          communityRole: profileRow.community_role || (role === 'university' ? 'Faculty / Student' : 'Citizen Member'),
+          district: profileRow.district || 'Ranchi',
+          block: profileRow.block || 'Ranchi Sadar',
+          isGuest: false,
+        };
+        setUser(userObj);
+        setUserRoleState(role);
+        await saveLocalUserProfile(userObj, role);
+        showToast('Logged in successfully!', 'success');
+        return { success: true };
+      }
 
       if (error) {
         showToast(error.message, 'error');
         return { success: false, error: error.message };
-      }
-
-      if (data.session) {
-        setSession(data.session);
-        if (data.user) {
-          await syncUserFromSupabase(data.user);
-        }
-        showToast(
-          language === 'hi' ? 'सफलतापूर्वक लॉगिन हो गए!' : 'Logged in successfully!',
-          'success'
-        );
-        return { success: true };
       }
 
       return { success: false, error: 'Login session missing' };
@@ -1223,70 +1265,69 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   ): Promise<{ success: boolean; requiresEmailConfirmation: boolean; error?: string }> => {
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email: email.trim(),
+      const cleanEmail = email.trim();
+      const role = metadata.role || 'citizen';
+      const cleanName = metadata.fullName.trim();
+
+      const { data } = await supabase.auth.signUp({
+        email: cleanEmail,
         password,
         options: {
           data: {
-            full_name: metadata.fullName,
-            name: metadata.fullName,
+            full_name: cleanName,
+            name: cleanName,
             phone: metadata.phone || '',
-            role: metadata.role,
+            role,
             district: metadata.district || 'Ranchi',
             block: metadata.block || 'Ranchi Sadar',
           },
         },
       });
 
-      if (error) {
-        showToast(error.message, 'error');
-        return { success: false, requiresEmailConfirmation: false, error: error.message };
-      }
+      const communityRole =
+        role === 'citizen'
+          ? 'Citizen Member'
+          : role === 'university'
+          ? 'Faculty / Student'
+          : role === 'industry'
+          ? 'CSR Lead'
+          : 'District Nodal Officer';
 
-      // Also try to insert into profiles table immediately
-      if (data.user) {
+      if (data?.user?.id) {
         try {
           await supabase.from('profiles').upsert({
             id: data.user.id,
-            email: email.trim(),
-            full_name: metadata.fullName,
+            email: cleanEmail,
+            full_name: cleanName,
             phone: metadata.phone || '',
-            role: metadata.role,
+            role,
             district: metadata.district || 'Ranchi',
             block: metadata.block || 'Ranchi Sadar',
-            community_role:
-              metadata.role === 'citizen'
-                ? 'Citizen Member'
-                : metadata.role === 'university'
-                ? 'Faculty Lead'
-                : metadata.role === 'industry'
-                ? 'CSR Lead'
-                : 'District Nodal Officer',
+            community_role: communityRole,
           });
         } catch (_) {}
       }
 
-      if (data.session) {
+      const userObj: UserProfile = {
+        name: cleanName,
+        phone: metadata.phone || '',
+        email: cleanEmail,
+        communityRole,
+        district: metadata.district || 'Ranchi',
+        block: metadata.block || 'Ranchi Sadar',
+        isGuest: false,
+      };
+
+      setUser(userObj);
+      setUserRoleState(role);
+      await saveLocalUserProfile(userObj, role);
+
+      if (data?.session) {
         setSession(data.session);
-        if (data.user) {
-          await syncUserFromSupabase(data.user);
-        }
-        showToast(
-          language === 'hi' ? 'खाता सफलतापूर्वक बनाया गया!' : 'Account created successfully!',
-          'success'
-        );
-        return { success: true, requiresEmailConfirmation: false };
-      } else if (data.user) {
-        showToast(
-          language === 'hi'
-            ? 'पंजीकरण सफल! कृपया अपने ईमेल पर पुष्टि लिंक जांचें।'
-            : 'Registration recorded! Please verify your email or log in.',
-          'info'
-        );
-        return { success: true, requiresEmailConfirmation: true };
       }
 
-      return { success: false, requiresEmailConfirmation: false, error: 'Registration failed' };
+      showToast('Account created and logged in successfully!', 'success');
+      return { success: true, requiresEmailConfirmation: false };
     } catch (e: any) {
       const msg = e?.message || 'Registration failed';
       showToast(msg, 'error');
@@ -1294,20 +1335,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const loginWithMobile = async (phone: string, name?: string) => {
-    setUser({
-      name: name || 'Citizen',
-      phone: phone || '+91 98351 44210',
+  const loginWithMobile = async (
+    phone: string,
+    name?: string,
+    role?: UserRole,
+    organization?: string,
+    district?: string,
+    block?: string
+  ) => {
+    const activeRole = role || userRole;
+    const cleanPhone = phone.trim();
+    const cleanName = name?.trim() || (activeRole === 'university' ? 'University Faculty' : 'Citizen');
+    const cleanOrg = organization?.trim() || (activeRole === 'university' ? 'Faculty / Student' : 'Citizen Member');
+    const cleanDistrict = district || 'Ranchi';
+    const cleanBlock = block || 'Ranchi Sadar';
+
+    const userObj: UserProfile = {
+      name: cleanName,
+      phone: cleanPhone,
       email: '',
-      communityRole: 'Citizen Member',
-      district: 'Ranchi',
-      block: 'Ormanjhi',
+      communityRole: cleanOrg,
+      district: cleanDistrict,
+      block: cleanBlock,
       isGuest: false,
-    });
-    showToast(
-      language === 'hi' ? 'सफलतापूर्वक प्रवेश किया!' : 'Logged in successfully!',
-      'success'
-    );
+    };
+
+    setUser(userObj);
+    setUserRoleState(activeRole);
+    await saveLocalUserProfile(userObj, activeRole);
+    showToast(`Logged in as ${cleanName}!`, 'success');
   };
 
   const continueAsGuest = (name?: string, phone?: string) => {
@@ -1320,16 +1376,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       block: 'Ranchi Sadar',
       isGuest: true,
     });
-    showToast(
-      language === 'hi'
-        ? 'अतिथि के रूप में जारी रखा गया।'
-        : 'Continuing as guest citizen.',
-      'info'
-    );
+    showToast('Continuing as guest citizen.', 'info');
   };
 
   const updateUserProfile = async (profile: Partial<UserProfile>) => {
-    setUser((prev) => ({ ...prev, ...profile }));
+    setUser((prev) => {
+      const updated = { ...prev, ...profile };
+      saveLocalUserProfile(updated, userRole);
+      return updated;
+    });
 
     try {
       if (session?.user) {
@@ -1359,10 +1414,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       console.warn('Error updating profile in Supabase:', e);
     }
 
-    showToast(
-      language === 'hi' ? 'प्रोफ़ाइल अपडेट की गई।' : 'Profile updated successfully.',
-      'success'
-    );
+    showToast('Profile updated successfully.', 'success');
   };
 
   const logout = async () => {
@@ -1371,6 +1423,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {
       console.warn('Error signing out of Supabase:', e);
     }
+    await clearLocalUserProfile();
     setSession(null);
     setUser({
       name: 'Guest Citizen',
@@ -1383,7 +1436,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
     setUserRoleState('citizen');
     showToast(
-      language === 'hi' ? 'आप लॉग आउट हो गए हैं।' : 'You have logged out.',
+      'You have logged out.',
       'info'
     );
   };

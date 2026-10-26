@@ -119,11 +119,11 @@ function NavTabButton({
   const { language, fontScale } = useApp();
 
   const labels = {
-    home: language === 'hi' ? 'होम' : 'Home',
-    explore: language === 'hi' ? 'चुनौतियां' : 'Challenges',
-    map: language === 'hi' ? 'मानचित्र' : 'Map',
-    workspace: language === 'hi' ? 'कार्यक्षेत्र' : 'Workspace',
-    profile: language === 'hi' ? 'प्रोफ़ाइल' : 'Profile',
+    home: 'Home',
+    explore: 'Challenges',
+    map: 'Map',
+    workspace: 'Workspace',
+    profile: 'Profile',
   };
 
   const label = labels[type];
@@ -155,9 +155,11 @@ function NavTabButton({
     profile: '/profile',
   };
 
+  const { ref: _ref, ...pressableProps } = props as any;
+
   return (
     <Pressable
-      {...props}
+      {...pressableProps}
       onPress={(e) => {
         props.onPress?.(e);
         const target = tabRoutes[type];

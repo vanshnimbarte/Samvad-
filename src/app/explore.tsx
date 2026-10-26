@@ -68,7 +68,7 @@ export default function ExploreProblemsScreen() {
             <TextInput
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholder={language === 'hi' ? 'चुनौती, जिला, AI टैग खोजें...' : 'Search challenges, district, AI tags...'}
+              placeholder="Search challenges, district, AI tags..."
               placeholderTextColor={SamadhanColors.textMuted}
               style={[styles.searchInput, { fontSize: 13 * fontScale }]}
             />
@@ -99,12 +99,12 @@ export default function ExploreProblemsScreen() {
 
         <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
           <Text style={styles.count}>
-            {filtered.length} {language === 'hi' ? 'चुनौतियां' : 'challenges'} · AI classified
+            {filtered.length} challenges · AI classified
           </Text>
           {filtered.length === 0 ? (
             <EmptyState
-              title={language === 'hi' ? 'कोई चुनौती नहीं मिली' : 'No challenges found'}
-              description={language === 'hi' ? 'फ़िल्टर बदलकर फिर कोशिश करें।' : 'Try another domain, stage, or search term.'}
+              title="No challenges found"
+              description="Try another domain, stage, or search term."
             />
           ) : (
             filtered.map((challenge) => <ChallengeCard key={challenge.id} challenge={challenge} />)

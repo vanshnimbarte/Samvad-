@@ -60,14 +60,12 @@ export default function PublicProblemDetailScreen() {
     CIVIC_CATEGORIES.find((c) => c.id === report.categoryId) ||
     CIVIC_CATEGORIES[0];
 
-  const title = language === 'hi' ? report.titleHi : report.titleEn;
-  const description = language === 'hi' ? report.descriptionHi : report.descriptionEn;
+  const title = report.titleEn;
+  const description = report.descriptionEn;
 
   const handleShare = () => {
     showToast(
-      language === 'hi'
-        ? 'समस्या का सार्वजनिक लिंक कॉपी किया गया।'
-        : 'Public problem link copied to clipboard.',
+      'Public problem link copied to clipboard.',
       'info'
     );
   };
@@ -76,11 +74,7 @@ export default function PublicProblemDetailScreen() {
     setIsFollowing(!isFollowing);
     showToast(
       !isFollowing
-        ? language === 'hi'
-          ? 'आप इस समस्या के अपडेट्स फॉलो कर रहे हैं।'
-          : 'You are now following updates for this problem.'
-        : language === 'hi'
-        ? 'अपडेट्स अनफॉलो किए गए।'
+        ? 'You are now following updates for this problem.'
         : 'Unfollowed updates.',
       'success'
     );
@@ -105,7 +99,7 @@ export default function PublicProblemDetailScreen() {
         <View style={styles.verifiedBadge}>
           <CheckCircle2 size={13} color="#FFFFFF" />
           <Text style={styles.verifiedBadgeText}>
-            {language === 'hi' ? 'सत्यापित सार्वजनिक समस्या' : 'VERIFIED COMMUNITY ISSUE'}
+            VERIFIED COMMUNITY ISSUE
           </Text>
         </View>
 
@@ -136,7 +130,7 @@ export default function PublicProblemDetailScreen() {
         <View style={[styles.mainCard, Shadows.sm]}>
           <View style={[styles.categoryPill, { backgroundColor: category.badgeBg }]}>
             <Text style={[styles.categoryPillText, { color: category.color }]}>
-              {language === 'hi' ? category.nameHi : category.nameEn}
+              {category.nameEn}
             </Text>
           </View>
 
@@ -155,14 +149,14 @@ export default function PublicProblemDetailScreen() {
             <View style={styles.impactCol}>
               <Text style={styles.impactNumber}>{report.supporters}</Text>
               <Text style={styles.impactLabel}>
-                {language === 'hi' ? 'समर्थक' : 'Supporters'}
+                Supporters
               </Text>
             </View>
             <View style={styles.dividerV} />
             <View style={styles.impactCol}>
               <Text style={styles.impactNumber}>{report.affectedCount}+</Text>
               <Text style={styles.impactLabel}>
-                {language === 'hi' ? 'नागरिक प्रभावित' : 'Citizens Affected'}
+                Citizens Affected
               </Text>
             </View>
             <View style={styles.dividerV} />
@@ -171,7 +165,7 @@ export default function PublicProblemDetailScreen() {
                 {report.urgency.toUpperCase()}
               </Text>
               <Text style={styles.impactLabel}>
-                {language === 'hi' ? 'प्राथमिकता' : 'Priority'}
+                Priority
               </Text>
             </View>
           </View>
@@ -181,11 +175,9 @@ export default function PublicProblemDetailScreen() {
             <Text style={styles.supportExplanationText}>
               💡{' '}
               <Text style={{ fontWeight: '700' }}>
-                {language === 'hi' ? 'नागरिक प्रभाव:' : 'Community Impact:'}
+                Community Impact:
               </Text>{' '}
-              {language === 'hi'
-                ? 'समस्या का समर्थन करने से प्रशासन एवं संस्थाओं को प्राथमिकताओं का त्वरित ज्ञान होता है।'
-                : 'Supporting a problem helps organizations understand community priorities and act faster.'}
+              Supporting a problem helps organizations understand community priorities and act faster.
             </Text>
           </View>
 
@@ -193,11 +185,7 @@ export default function PublicProblemDetailScreen() {
           <Button
             title={
               isSupported
-                ? language === 'hi'
-                  ? 'आपने समर्थन दिया है (समर्थित ✓)'
-                  : 'You Supported This Issue ✓'
-                : language === 'hi'
-                ? 'इस समस्या का समर्थन करें (Upvote)'
+                ? 'You Supported This Issue ✓'
                 : 'Support This Problem'
             }
             onPress={() => toggleSupportProblem(report.id)}
@@ -211,11 +199,7 @@ export default function PublicProblemDetailScreen() {
           <Button
             title={
               isFollowing
-                ? language === 'hi'
-                  ? 'फॉलो कर रहे हैं (अलर्ट चालू)'
-                  : 'Following (Alerts On)'
-                : language === 'hi'
-                ? 'प्रगति अपडेट फॉलो करें'
+                ? 'Following (Alerts On)'
                 : 'Follow Progress Updates'
             }
             onPress={handleToggleFollow}
@@ -233,7 +217,7 @@ export default function PublicProblemDetailScreen() {
 
           {/* Description */}
           <Text style={[styles.secHeading, { fontSize: 15 * fontScale, marginTop: Spacing.lg }]}>
-            {language === 'hi' ? 'समस्या का संपूर्ण विवरण' : 'Detailed Description'}
+            Detailed Description
           </Text>
           <Text style={[styles.descriptionText, { fontSize: 13 * fontScale }]}>
             {description}
@@ -245,7 +229,7 @@ export default function PublicProblemDetailScreen() {
               <Building size={16} color={SamadhanColors.primary} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.responsibleLabel}>
-                  {language === 'hi' ? 'संबंधित नोडल संस्था:' : 'Responsible Nodal Agency:'}
+                  Responsible Nodal Agency:
                 </Text>
                 <Text style={styles.responsibleOrgName}>{report.responsibleOrg.name}</Text>
                 <Text style={styles.responsibleDept}>
@@ -271,16 +255,14 @@ export default function PublicProblemDetailScreen() {
             accessibilityLabel="Report duplicate issue"
             onPress={() =>
               showToast(
-                language === 'hi'
-                  ? 'डुप्लीकेट समस्या की रिपोर्ट दर्ज की गई।'
-                  : 'Duplicate report notice sent to coordinators.',
+                'Duplicate report notice sent to coordinators.',
                 'info'
               )
             }
             style={styles.flagBtn}>
             <Flag size={14} color={SamadhanColors.textMuted} />
             <Text style={styles.flagText}>
-              {language === 'hi' ? 'डुप्लीकेट रिपोर्ट करें' : 'Report Duplicate'}
+              Report Duplicate
             </Text>
           </Pressable>
 
@@ -289,16 +271,14 @@ export default function PublicProblemDetailScreen() {
             accessibilityLabel="Report inaccurate info"
             onPress={() =>
               showToast(
-                language === 'hi'
-                  ? 'गलत विवरण की सूचना समन्वयकों को प्रेषित।'
-                  : 'Inaccurate info flag sent for review.',
+                'Inaccurate info flag sent for review.',
                 'info'
               )
             }
             style={styles.flagBtn}>
             <AlertTriangle size={14} color={SamadhanColors.textMuted} />
             <Text style={styles.flagText}>
-              {language === 'hi' ? 'गलत सूचना रिपोर्ट करें' : 'Inaccurate Info'}
+              Inaccurate Info
             </Text>
           </Pressable>
         </View>
@@ -307,7 +287,7 @@ export default function PublicProblemDetailScreen() {
         {relatedProblems.length > 0 && (
           <View style={styles.relatedSection}>
             <Text style={[styles.secHeading, { fontSize: 15 * fontScale }]}>
-              {language === 'hi' ? 'समान श्रेणी की अन्य समस्याएं' : 'Related Community Issues'}
+              Related Community Issues
             </Text>
             {relatedProblems.map((rel) => (
               <Pressable
@@ -318,7 +298,7 @@ export default function PublicProblemDetailScreen() {
                 style={styles.relatedCard}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.relatedTitle} numberOfLines={1}>
-                    {language === 'hi' ? rel.titleHi : rel.titleEn}
+                    {rel.titleEn}
                   </Text>
                   <Text style={styles.relatedLocation}>
                     📍 {rel.location.villageOrWard}, {rel.location.block}

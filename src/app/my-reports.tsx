@@ -106,11 +106,7 @@ export default function MyReportsScreen() {
                 accessibilityLabel="Search my reports"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
-                placeholder={
-                  language === 'hi'
-                    ? 'रिपोर्ट ID, शीर्षक, या स्थान खोजें...'
-                    : 'Search by ID, title, or village...'
-                }
+                placeholder="Search by ID, title, or village..."
                 placeholderTextColor={SamadhanColors.textMuted}
                 style={styles.searchInput}
               />
@@ -155,7 +151,7 @@ export default function MyReportsScreen() {
             <View style={styles.filterDrawer}>
               {/* Status Filter Row */}
               <Text style={styles.filterGroupTitle}>
-                {language === 'hi' ? 'स्थिति अनुसार फ़िल्टर:' : 'Filter by Status:'}
+                Filter by Status:
               </Text>
               <ScrollView
                 horizontal
@@ -174,7 +170,7 @@ export default function MyReportsScreen() {
                       styles.filterChipText,
                       selectedStatus === 'All' && styles.filterChipTextActive,
                     ]}>
-                    {language === 'hi' ? 'सभी स्थितियां' : 'All Statuses'}
+                    All Statuses
                   </Text>
                 </Pressable>
 
@@ -199,7 +195,7 @@ export default function MyReportsScreen() {
                           styles.filterChipText,
                           isActive && { color: cfg.color, fontWeight: '800' },
                         ]}>
-                        {language === 'hi' ? cfg.labelHi : cfg.labelEn}
+                        {cfg.labelEn}
                       </Text>
                     </Pressable>
                   );
@@ -217,7 +213,7 @@ export default function MyReportsScreen() {
                   }}
                   style={styles.resetFilterBtn}>
                   <Text style={styles.resetFilterText}>
-                    {language === 'hi' ? 'फ़िल्टर हटाएं' : 'Clear Filters'}
+                    Clear Filters
                   </Text>
                 </Pressable>
               )}
@@ -239,8 +235,7 @@ export default function MyReportsScreen() {
                   styles.subTabText,
                   activeTab === 'submitted' && styles.subTabTextActive,
                 ]}>
-                {language === 'hi' ? 'दर्ज रिपोर्ट्स' : 'Submitted Reports'} (
-                {mySubmittedReports.length})
+                Submitted Reports ({mySubmittedReports.length})
               </Text>
             </Pressable>
 
@@ -257,7 +252,7 @@ export default function MyReportsScreen() {
                   styles.subTabText,
                   activeTab === 'drafts' && styles.subTabTextActive,
                 ]}>
-                {language === 'hi' ? 'ऑफ़लाइन ड्राफ्ट्स' : 'Offline Drafts'} ({drafts.length})
+                Offline Drafts ({drafts.length})
               </Text>
             </Pressable>
           </View>
@@ -277,9 +272,7 @@ export default function MyReportsScreen() {
                   <View style={styles.mapHeaderNotice}>
                     <MapIcon size={16} color={SamadhanColors.primary} />
                     <Text style={styles.mapNoticeText}>
-                      {language === 'hi'
-                        ? 'झारखंड सामुदायिक मानचित्र: आपकी सभी दर्ज समस्याएं पिन की गई हैं।'
-                        : 'Interactive Jharkhand Map: Live pins for your reported issues.'}
+                      Interactive Jharkhand Map: Live pins for your reported issues.
                     </Text>
                   </View>
 
@@ -300,13 +293,9 @@ export default function MyReportsScreen() {
                     /* No Search Results State */
                     <EmptyState
                       icon={FileQuestion}
-                      title={language === 'hi' ? 'कोई परिणाम नहीं मिला' : 'No search results'}
-                      description={
-                        language === 'hi'
-                          ? `‘${searchQuery}’ से मेल खाती कोई रिपोर्ट नहीं मिली। कृपया दूसरे शब्दों से खोजें।`
-                          : `No reports match '${searchQuery}'. Try adjusting your search query or filters.`
-                      }
-                      actionTitle={language === 'hi' ? 'फ़िल्टर हटाएं' : 'Reset Search'}
+                      title="No search results"
+                      description={`No reports match '${searchQuery}'. Try adjusting your search query or filters.`}
+                      actionTitle="Reset Search"
                       onActionPress={() => {
                         setSearchQuery('');
                         setSelectedStatus('All');
@@ -315,12 +304,8 @@ export default function MyReportsScreen() {
                   ) : (
                     /* Empty State */
                     <EmptyState
-                      title={language === 'hi' ? 'आपने अभी तक कोई रिपोर्ट दर्ज नहीं की है।' : 'You have not submitted any reports yet.'}
-                      description={
-                        language === 'hi'
-                          ? 'अपने गांव, वार्ड या कस्बे में पानी, सड़क, स्कूल आदि की समस्या 3 मिनट में दर्ज करें।'
-                          : 'Notice a broken handpump, flooded road, or dark street? Report it in <3 minutes.'
-                      }
+                      title="You have not submitted any reports yet."
+                      description="Notice a broken handpump, flooded road, or dark street? Report it in <3 minutes."
                       actionTitle={t('reportProblem')}
                       onActionPress={() => router.push('/report-problem')}
                     />
@@ -339,17 +324,11 @@ export default function MyReportsScreen() {
                   <View style={styles.draftsSyncCard}>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.draftsSyncTitle}>
-                        {language === 'hi'
-                          ? `${drafts.length} ड्राफ्ट इस फोन में सहेजे गए हैं`
-                          : `${drafts.length} report(s) saved on this device`}
+                        {`${drafts.length} report(s) saved on this device`}
                       </Text>
                       <Text style={styles.draftsSyncDesc}>
                         {isOffline
-                          ? language === 'hi'
-                            ? 'इंटरनेट कनेक्ट होते ही आप इन्हें सबमिट कर सकते हैं।'
-                            : 'Connect to internet to synchronize with the server.'
-                          : language === 'hi'
-                          ? 'इंटरनेट उपलब्ध है। अभी एक क्लिक में सभी ड्राफ्ट सबमिट करें।'
+                          ? 'Connect to internet to synchronize with the server.'
                           : 'Internet connection is available. Sync all pending drafts now.'}
                       </Text>
                     </View>
@@ -362,7 +341,7 @@ export default function MyReportsScreen() {
                         style={styles.syncAllBtn}>
                         <RefreshCw size={14} color="#FFFFFF" />
                         <Text style={styles.syncAllBtnText}>
-                          {language === 'hi' ? 'सब सिंक करें' : 'Sync All'}
+                          Sync All
                         </Text>
                       </Pressable>
                     )}
@@ -375,7 +354,7 @@ export default function MyReportsScreen() {
                         <View style={styles.draftBadge}>
                           <Clock size={12} color={SamadhanColors.action} />
                           <Text style={styles.draftBadgeText}>
-                            {language === 'hi' ? 'सहेजा गया ड्राफ्ट' : 'Saved on Device'}
+                            Saved on Device
                           </Text>
                         </View>
 
@@ -405,7 +384,7 @@ export default function MyReportsScreen() {
 
                       <View style={styles.draftActionRow}>
                         <Button
-                          title={language === 'hi' ? 'संपादित व सबमिट करें' : 'Resume & Submit'}
+                          title="Resume & Submit"
                           onPress={() => router.push('/report-problem')}
                           variant="outline"
                           size="sm"
@@ -417,12 +396,8 @@ export default function MyReportsScreen() {
                 </>
               ) : (
                 <EmptyState
-                  title={language === 'hi' ? 'कोई सहेजा गया ड्राफ्ट नहीं है' : 'No offline drafts found'}
-                  description={
-                    language === 'hi'
-                      ? 'जब आप ऑफ़लाइन होते हुए रिपोर्ट लिखते हैं, तो वह यहां सुरक्षित रहती है।'
-                      : 'Reports you start without an internet connection will be safely stored here.'
-                  }
+                  title="No offline drafts found"
+                  description="Reports you start without an internet connection will be safely stored here."
                   actionTitle={t('reportProblem')}
                   onActionPress={() => router.push('/report-problem')}
                 />

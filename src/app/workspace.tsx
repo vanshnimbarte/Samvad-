@@ -31,12 +31,12 @@ export default function WorkspaceScreen() {
 
   const title =
     userRole === 'citizen'
-      ? language === 'hi' ? 'मेरी चुनौतियां' : 'My challenges'
+      ? 'My challenges'
       : userRole === 'government'
-      ? language === 'hi' ? 'प्रशासक कतार' : 'Admin validation queue'
+      ? 'Admin validation queue'
       : userRole === 'university'
-      ? language === 'hi' ? 'HEI कार्यक्षेत्र' : 'University workspace'
-      : language === 'hi' ? 'उद्योग डेस्क' : 'Industry / CSR desk';
+      ? 'University workspace'
+      : 'Industry / CSR desk';
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>

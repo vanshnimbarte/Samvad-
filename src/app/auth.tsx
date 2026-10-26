@@ -53,10 +53,10 @@ export default function AuthScreen() {
 
   const [portalRole, setPortalRole] = useState<UserRole>('citizen');
 
-  // Authentication Mode: 'email' | 'otp' | 'guest'
+
   const [authMode, setAuthMode] = useState<'email' | 'otp' | 'guest'>('email');
 
-  // Email sub-mode: 'signin' | 'signup'
+
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -67,18 +67,20 @@ export default function AuthScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [emailConfirmationPending, setEmailConfirmationPending] = useState(false);
 
-  // Mobile + OTP state
-  const [phone, setPhone] = useState('98351 44210');
+
+  const [phone, setPhone] = useState('7972671490');
+  const [mobileFullName, setMobileFullName] = useState('');
+  const [universityName, setUniversityName] = useState('IIT (ISM) Dhanbad');
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState(['4', '8', '2', '1', '9', '0']);
   const [resendTimer, setResendTimer] = useState(30);
 
-  // Guest fields
+
   const [guestName, setGuestName] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
   const [guestContactMethod, setGuestContactMethod] = useState<'Phone' | 'WhatsApp'>('Phone');
 
-  // Countdown timer for OTP resend
+
   useEffect(() => {
     let interval: any;
     if (otpSent && resendTimer > 0) {
@@ -89,25 +91,15 @@ export default function AuthScreen() {
     return () => clearInterval(interval);
   }, [otpSent, resendTimer]);
 
-  // Handle Supabase Email Sign In / Sign Up
+
   const handleEmailAuth = async () => {
     if (!email.trim() || !email.includes('@')) {
-      showToast(
-        language === 'hi'
-          ? 'कृपया वैध ईमेल पता दर्ज करें।'
-          : 'Please enter a valid email address.',
-        'error'
-      );
+      showToast('Please enter a valid email address.', 'error');
       return;
     }
 
     if (!password || password.length < 6) {
-      showToast(
-        language === 'hi'
-          ? 'पासवर्ड कम से कम 6 अक्षरों का होना चाहिए।'
-          : 'Password must be at least 6 characters.',
-        'error'
-      );
+      showToast('Password must be at least 6 characters.', 'error');
       return;
     }
 
@@ -115,10 +107,7 @@ export default function AuthScreen() {
     try {
       if (isSignUp) {
         if (!fullName.trim()) {
-          showToast(
-            language === 'hi' ? 'कृपया अपना पूरा नाम दर्ज करें।' : 'Please enter your full name.',
-            'error'
-          );
+          showToast('Please enter your full name.', 'error');
           setIsSubmitting(false);
           return;
         }
@@ -132,11 +121,7 @@ export default function AuthScreen() {
         });
 
         if (res.success) {
-          if (res.requiresEmailConfirmation) {
-            setEmailConfirmationPending(true);
-          } else {
-            router.replace('/');
-          }
+          router.replace('/');
         }
       } else {
         const res = await signInWithEmail(email, password);
@@ -152,36 +137,37 @@ export default function AuthScreen() {
   };
 
   const handleSendOtp = () => {
-    if (!phone || phone.replace(/\D/g, '').length < 10) {
-      showToast(
-        language === 'hi'
-          ? 'कृपया वैध 10 अंकों का मोबाइल नंबर दर्ज करें।'
-          : 'Please enter a valid 10-digit mobile number.',
-        'error'
-      );
+    const clean = phone.replace(/\D/g, '');
+    if (!clean || clean.length < 10) {
+      showToast('Please enter a valid 10-digit mobile number.', 'error');
+      return;
+    }
+    if (!mobileFullName.trim()) {
+      showToast('Please enter your full name.', 'error');
       return;
     }
     setOtpSent(true);
     setResendTimer(30);
-    showToast(
-      language === 'hi'
-        ? `सत्यापन कोड 482190 मोबाइल नंबर +91 ${phone} पर भेजा गया!`
-        : `Verification code 482190 sent to +91 ${phone}!`,
-      'success'
-    );
+    showToast(`Verification code 482190 sent to +91 ${clean}!`, 'success');
   };
 
   const handleVerifyOtp = async () => {
-    setUserRole(portalRole);
-    await loginWithMobile(
-      `+91 ${phone}`,
-      portalRole === 'citizen'
-        ? 'Sunita Devi'
-        : portalRole === 'university'
-        ? 'Dr. Anjali Singh'
+    const clean = phone.replace(/\D/g, '');
+    const name = mobileFullName.trim() || 'User';
+    const org =
+      portalRole === 'university'
+        ? `Faculty / Student (${universityName})`
         : portalRole === 'industry'
-        ? 'CSR Lead, Tata Steel'
-        : 'District Nodal Officer'
+        ? 'CSR / Industry Partner'
+        : 'Citizen Member';
+
+    await loginWithMobile(
+      `+91 ${clean}`,
+      name,
+      portalRole,
+      org,
+      district,
+      block
     );
     router.replace('/');
   };
@@ -199,7 +185,7 @@ export default function AuthScreen() {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
-        {/* Brand Header */}
+        {}
         <View style={styles.brandHeader}>
           <View style={styles.logoBadge}>
             <Text style={styles.logoBadgeText}>SJ</Text>
@@ -213,7 +199,7 @@ export default function AuthScreen() {
               : 'Citizen-to-campus societal innovation portal for Jharkhand'}
           </Text>
 
-          {/* Supabase Connection Status Pill */}
+          {}
           <View style={styles.supabaseLivePill}>
             <View style={styles.liveDot} />
             <Database size={12} color="#16A34A" />
@@ -223,7 +209,7 @@ export default function AuthScreen() {
           </View>
         </View>
 
-        {/* Role Selector */}
+        {}
         <Text style={styles.roleLabel}>
           {language === 'hi' ? 'भूमिका चुनें' : 'Choose Your Role'}
         </Text>
@@ -250,7 +236,7 @@ export default function AuthScreen() {
           ))}
         </View>
 
-        {/* Tab Switch: Email / Mobile OTP / Continue as Guest */}
+        {}
         <View style={styles.tabToggle}>
           <Pressable
             accessibilityRole="tab"
@@ -297,10 +283,10 @@ export default function AuthScreen() {
           </Pressable>
         </View>
 
-        {/* ============ MODE 1: SUPABASE EMAIL AUTH ============ */}
+        {}
         {authMode === 'email' && (
           <View style={[styles.card, Shadows.sm]}>
-            {/* Toggle Sign In / Sign Up */}
+            {}
             <View style={styles.subModeSwitch}>
               <Pressable
                 onPress={() => {
@@ -327,58 +313,28 @@ export default function AuthScreen() {
                     styles.subModeText,
                     isSignUp && styles.subModeTextActive,
                   ]}>
-                  {language === 'hi' ? 'नया खाता बनाएं' : 'Create Account'}
+                  Create Account
                 </Text>
               </Pressable>
             </View>
 
             <Text style={[styles.cardHeading, { fontSize: 16 * fontScale }]}>
               {isSignUp
-                ? language === 'hi'
-                  ? 'सुपाबेस पर नया खाता बनाएं'
-                  : 'Register on Supabase'
-                : language === 'hi'
-                ? 'ईमेल से लॉगिन करें'
-                : 'Login with Supabase'}
+                ? 'Register with Email'
+                : 'Login with Email'}
             </Text>
             <Text style={styles.cardSubtext}>
               {isSignUp
-                ? language === 'hi'
-                  ? 'आपका खाता सीधे सुपाबेस ऑथेंटिकेशन और प्रोफ़ाइल तालिका में सुरक्षित रूप से दर्ज होगा।'
-                  : 'Your account will be directly registered in Supabase Authentication and Profiles table.'
-                : language === 'hi'
-                ? 'अपने पंजीकृत ईमेल और पासवर्ड से प्रवेश करें।'
+                ? 'Create your account to submit reports, track challenges, and collaborate.'
                 : 'Sign in to access your dashboard, projects, and notifications.'}
             </Text>
 
-            {/* Email Confirmation Notice Banner */}
-            {emailConfirmationPending && (
-              <View style={styles.pendingBanner}>
-                <CheckCircle2 size={18} color="#16A34A" />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.pendingBannerTitle}>
-                    {language === 'hi' ? 'खाता पंजीकृत हो गया!' : 'Account registered in Supabase!'}
-                  </Text>
-                  <Text style={styles.pendingBannerText}>
-                    {language === 'hi'
-                      ? 'सुपाबेस सत्यापन लिंक आपके ईमेल पर भेजा गया है। ईमेल में दिए गए लिंक पर क्लिक करें और फिर साइन इन करें।'
-                      : 'Verification link sent to your email. Click it in your inbox, then toggle to "Sign In" above to enter.'}
-                  </Text>
-                  <Text style={styles.pendingTip}>
-                    {language === 'hi'
-                      ? 'टिप: सुपाबेस डैशबोर्ड (Auth > Providers > Email) में "Confirm email" बंद करके बिना सत्यापन तुरंत लॉगिन की अनुमति दे सकते हैं।'
-                      : 'Tip: In Supabase Dashboard (Auth > Providers > Email), you can disable "Confirm email" for instant login without waiting for email verification.'}
-                  </Text>
-                </View>
-              </View>
-            )}
-
-            {/* Sign Up Specific Fields: Full Name, District, Block */}
+            {}
             {isSignUp && (
               <>
                 <View style={styles.inputGroup}>
                   <Text style={styles.fieldLabel}>
-                    {language === 'hi' ? 'पूरा नाम' : 'Full Name'} *
+                    Full Name *
                   </Text>
                   <View style={styles.inputWrapper}>
                     <User size={16} color={SamadhanColors.textMuted} style={styles.inputIcon} />
@@ -386,25 +342,42 @@ export default function AuthScreen() {
                       accessibilityLabel="Full Name"
                       value={fullName}
                       onChangeText={setFullName}
-                      placeholder={
-                        portalRole === 'citizen'
-                          ? 'Sunita Devi'
-                          : portalRole === 'university'
-                          ? 'Dr. Anjali Singh'
-                          : portalRole === 'industry'
-                          ? 'Rajesh Sharma'
-                          : 'Amit Verma'
-                      }
+                      placeholder={portalRole === 'university' ? 'e.g. Prof. Kumar or your name' : 'Enter your full name'}
                       placeholderTextColor={SamadhanColors.textMuted}
                       style={styles.textInputWithIcon}
                     />
                   </View>
                 </View>
 
+                {portalRole === 'university' && (
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.fieldLabel}>University / Institution *</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 4 }}>
+                      {['IIT (ISM) Dhanbad', 'BIT Mesra', 'NIT Jamshedpur', 'Ranchi University', 'Other'].map((uni) => (
+                        <Pressable
+                          key={uni}
+                          onPress={() => setUniversityName(uni)}
+                          style={[
+                            styles.uniSelectChip,
+                            universityName === uni && styles.uniSelectChipActive,
+                          ]}>
+                          <Text
+                            style={[
+                              styles.uniSelectChipText,
+                              universityName === uni && styles.uniSelectChipTextActive,
+                            ]}>
+                            {uni}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
+
                 <View style={styles.rowInputs}>
                   <View style={[styles.inputGroup, { flex: 1 }]}>
                     <Text style={styles.fieldLabel}>
-                      {language === 'hi' ? 'जिला' : 'District'}
+                      District
                     </Text>
                     <View style={styles.inputWrapper}>
                       <MapPin size={16} color={SamadhanColors.textMuted} style={styles.inputIcon} />
@@ -421,7 +394,7 @@ export default function AuthScreen() {
 
                   <View style={[styles.inputGroup, { flex: 1 }]}>
                     <Text style={styles.fieldLabel}>
-                      {language === 'hi' ? 'प्रखंड / ब्लॉक' : 'Block'}
+                      Block
                     </Text>
                     <View style={styles.inputWrapper}>
                       <Building size={16} color={SamadhanColors.textMuted} style={styles.inputIcon} />
@@ -439,7 +412,7 @@ export default function AuthScreen() {
 
                 <View style={styles.inputGroup}>
                   <Text style={styles.fieldLabel}>
-                    {language === 'hi' ? 'मोबाइल नंबर (वैकल्पिक)' : 'Mobile Phone (Optional)'}
+                    Mobile Phone (Optional)
                   </Text>
                   <View style={styles.inputWrapper}>
                     <Phone size={16} color={SamadhanColors.textMuted} style={styles.inputIcon} />
@@ -457,10 +430,10 @@ export default function AuthScreen() {
               </>
             )}
 
-            {/* Email Address */}
+            {}
             <View style={styles.inputGroup}>
               <Text style={styles.fieldLabel}>
-                {language === 'hi' ? 'ईमेल पता' : 'Email Address'} *
+                Email Address *
               </Text>
               <View style={styles.inputWrapper}>
                 <Mail size={16} color={SamadhanColors.textMuted} style={styles.inputIcon} />
@@ -477,10 +450,10 @@ export default function AuthScreen() {
               </View>
             </View>
 
-            {/* Password */}
+            {}
             <View style={styles.inputGroup}>
               <Text style={styles.fieldLabel}>
-                {language === 'hi' ? 'पासवर्ड' : 'Password'} *
+                Password *
               </Text>
               <View style={styles.inputWrapper}>
                 <Lock size={16} color={SamadhanColors.textMuted} style={styles.inputIcon} />
@@ -496,19 +469,13 @@ export default function AuthScreen() {
               </View>
             </View>
 
-            {/* Submit Button */}
+            {}
             <Button
               title={
                 isSubmitting
-                  ? language === 'hi'
-                    ? 'कृपया प्रतीक्षा करें...'
-                    : 'Connecting to Supabase...'
+                  ? 'Connecting to Supabase...'
                   : isSignUp
-                  ? language === 'hi'
-                    ? 'खाता बनाएं (Supabase Auth)'
-                    : 'Create Account (Supabase Auth)'
-                  : language === 'hi'
-                  ? 'लॉगिन करें'
+                  ? 'Create Account'
                   : 'Sign In'
               }
               onPress={handleEmailAuth}
@@ -527,21 +494,61 @@ export default function AuthScreen() {
           </View>
         )}
 
-        {/* ============ MODE 2: MOBILE OTP ============ */}
+        {}
         {authMode === 'otp' && (
           <View style={[styles.card, Shadows.sm]}>
             {!otpSent ? (
               <>
                 <Text style={[styles.cardHeading, { fontSize: 16 * fontScale }]}>
-                  {language === 'hi' ? 'मोबाइल नंबर से लॉगिन करें' : 'Login with Mobile Number'}
+                  Login with Mobile Number
                 </Text>
                 <Text style={styles.cardSubtext}>
-                  {language === 'hi'
-                    ? 'हम आपके नंबर पर 6 अंकों का एकमुश्त पासवर्ड (OTP) भेजेंगे।'
-                    : 'We will send a 6-digit one-time password (OTP) to your phone.'}
+                  Enter your details to log in or create your verified profile.
                 </Text>
 
-                {/* Country code + Mobile field */}
+                {}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.fieldLabel}>Your Full Name *</Text>
+                  <View style={styles.inputWrapper}>
+                    <User size={16} color={SamadhanColors.textMuted} style={styles.inputIcon} />
+                    <TextInput
+                      accessibilityLabel="Full Name"
+                      value={mobileFullName}
+                      onChangeText={setMobileFullName}
+                      placeholder={portalRole === 'university' ? 'e.g. Prof. Kumar or your name' : 'Enter your full name'}
+                      placeholderTextColor={SamadhanColors.textMuted}
+                      style={styles.textInputWithIcon}
+                    />
+                  </View>
+                </View>
+
+                {}
+                {portalRole === 'university' && (
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.fieldLabel}>University / Institution *</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 4 }}>
+                      {['IIT (ISM) Dhanbad', 'BIT Mesra', 'NIT Jamshedpur', 'Ranchi University', 'Other'].map((uni) => (
+                        <Pressable
+                          key={uni}
+                          onPress={() => setUniversityName(uni)}
+                          style={[
+                            styles.uniSelectChip,
+                            universityName === uni && styles.uniSelectChipActive,
+                          ]}>
+                          <Text
+                            style={[
+                              styles.uniSelectChipText,
+                              universityName === uni && styles.uniSelectChipTextActive,
+                            ]}>
+                            {uni}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
+
+                {}
                 <View style={styles.phoneInputRow}>
                   <View style={styles.countryCodeBadge}>
                     <Text style={styles.flagEmoji}>🇮🇳</Text>
@@ -561,7 +568,7 @@ export default function AuthScreen() {
                 </View>
 
                 <Button
-                  title={language === 'hi' ? 'OTP प्राप्त करें' : 'Get OTP'}
+                  title="Get OTP & Continue"
                   onPress={handleSendOtp}
                   variant="action"
                   size="lg"
@@ -570,18 +577,19 @@ export default function AuthScreen() {
                 />
               </>
             ) : (
-              /* OTP VERIFICATION STEP */
               <>
                 <Text style={[styles.cardHeading, { fontSize: 16 * fontScale }]}>
-                  {language === 'hi' ? 'OTP सत्यापन करें' : 'Verify Mobile OTP'}
+                  Verify Mobile OTP
                 </Text>
                 <Text style={styles.cardSubtext}>
-                  {language === 'hi'
-                    ? `+91 ${phone} पर भेजा गया 6 अंकों का कोड दर्ज करें`
-                    : `Enter the 6-digit code sent to +91 ${phone}`}
+                  Enter the 6-digit code sent to +91 {phone}
                 </Text>
 
-                {/* OTP Input Boxes */}
+                <View style={styles.demoCodeBadge}>
+                  <Text style={styles.demoCodeText}>Verification Code: 482190</Text>
+                </View>
+
+                {}
                 <View style={styles.otpGrid}>
                   {otp.map((digit, idx) => (
                     <View key={idx} style={styles.otpBox}>
@@ -597,15 +605,13 @@ export default function AuthScreen() {
                     onPress={() => setOtpSent(false)}
                     style={styles.changePhoneBtn}>
                     <Text style={styles.changePhoneText}>
-                      {language === 'hi' ? 'नंबर बदलें' : 'Change number'}
+                      Change number
                     </Text>
                   </Pressable>
 
                   {resendTimer > 0 ? (
                     <Text style={styles.timerText}>
-                      {language === 'hi'
-                        ? `${resendTimer} सेकंड में दोबारा भेजें`
-                        : `Resend in ${resendTimer}s`}
+                      Resend in {resendTimer}s
                     </Text>
                   ) : (
                     <Pressable
@@ -615,14 +621,14 @@ export default function AuthScreen() {
                       style={styles.resendBtn}>
                       <RefreshCw size={12} color={SamadhanColors.primary} />
                       <Text style={styles.resendText}>
-                        {language === 'hi' ? 'दोबारा भेजें' : 'Resend OTP'}
+                        Resend OTP
                       </Text>
                     </Pressable>
                   )}
                 </View>
 
                 <Button
-                  title={language === 'hi' ? 'सत्यापित करें व आगे बढ़ें' : 'Verify & Enter'}
+                  title="Verify & Enter"
                   onPress={handleVerifyOtp}
                   variant="action"
                   size="lg"
@@ -634,7 +640,7 @@ export default function AuthScreen() {
           </View>
         )}
 
-        {/* ============ MODE 3: GUEST USER ============ */}
+        {}
         {authMode === 'guest' && (
           <View style={[styles.card, Shadows.sm]}>
             <Text style={[styles.cardHeading, { fontSize: 16 * fontScale }]}>
@@ -646,7 +652,7 @@ export default function AuthScreen() {
                 : 'You can explore and report issues without creating an account. Name is optional.'}
             </Text>
 
-            {/* Optional Name */}
+            {}
             <View style={styles.inputGroup}>
               <Text style={styles.fieldLabel}>
                 {language === 'hi' ? 'आपका नाम (वैकल्पिक)' : 'Your Name (Optional)'}
@@ -661,7 +667,7 @@ export default function AuthScreen() {
               />
             </View>
 
-            {/* Optional Phone */}
+            {}
             <View style={styles.inputGroup}>
               <Text style={styles.fieldLabel}>
                 {language === 'hi' ? 'मोबाइल नंबर (अपडेट पाने हेतु)' : 'Mobile Number (For SMS updates)'}
@@ -677,7 +683,7 @@ export default function AuthScreen() {
               />
             </View>
 
-            {/* Contact Method */}
+            {}
             <View style={styles.inputGroup}>
               <Text style={styles.fieldLabel}>
                 {language === 'hi' ? 'संपर्क का पसंदीदा माध्यम' : 'Preferred Contact Method'}
@@ -716,7 +722,7 @@ export default function AuthScreen() {
           </View>
         )}
 
-        {/* Privacy and DPDP Notice */}
+        {}
         <View style={styles.privacyNote}>
           <ShieldCheck size={16} color="#16A34A" />
           <Text style={styles.privacyText}>
@@ -1113,5 +1119,41 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#166534',
     lineHeight: 16,
+  },
+  uniSelectChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: Radius.md,
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+  },
+  uniSelectChipActive: {
+    backgroundColor: SamadhanColors.primary,
+    borderColor: SamadhanColors.primary,
+  },
+  uniSelectChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: SamadhanColors.textSecondary,
+  },
+  uniSelectChipTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  demoCodeBadge: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#BFDBFE',
+    borderWidth: 1,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: Radius.sm,
+    alignSelf: 'center',
+    marginBottom: Spacing.sm,
+  },
+  demoCodeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#1D4ED8',
   },
 });

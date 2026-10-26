@@ -16,7 +16,6 @@ import {
   Mail,
   MapPin,
   Building,
-  Languages,
   Type,
   Mic,
   Zap,
@@ -53,8 +52,6 @@ export default function ProfileScreen() {
   const {
     user,
     session,
-    language,
-    setLanguage,
     textSize,
     setTextSize,
     fontScale,
@@ -143,22 +140,22 @@ export default function ProfileScreen() {
 
         <View style={styles.settingsSection}>
           <Text style={[styles.sectionHeading, { fontSize: 15 * fontScale }]}>
-            {language === 'hi' ? 'सत्यापित भूमिका एवं संगठन' : 'Verified Role & Organization'}
+            Verified Role & Organization
           </Text>
           <View style={styles.settingCard}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.sm }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <View style={{ backgroundColor: SamadhanColors.primary + '15', paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.full }}>
                   <Text style={{ fontSize: 12, fontWeight: '800', color: SamadhanColors.primary }}>
-                    {userRole === 'citizen' ? (language === 'hi' ? '👤 नागरिक' : '👤 Citizen') : null}
-                    {userRole === 'university' ? (language === 'hi' ? '🎓 विश्वविद्यालय' : '🎓 University') : null}
-                    {userRole === 'industry' ? (language === 'hi' ? '🏢 उद्योग / CSR' : '🏢 Industry / CSR') : null}
-                    {userRole === 'government' ? (language === 'hi' ? '🏛️ प्रशासनिक' : '🏛️ Government') : null}
+                    {userRole === 'citizen' ? '👤 Citizen' : null}
+                    {userRole === 'university' ? '🎓 University' : null}
+                    {userRole === 'industry' ? '🏢 Industry / CSR' : null}
+                    {userRole === 'government' ? '🏛️ Government' : null}
                   </Text>
                 </View>
               </View>
               <Text style={{ fontSize: 11, color: SamadhanColors.textMuted, fontWeight: '600' }}>
-                {language === 'hi' ? 'सक्रिय सत्र' : 'Active session'}
+                Active session
               </Text>
             </View>
             <Text style={{ fontSize: 13, color: SamadhanColors.textSecondary, marginBottom: Spacing.md }}>
@@ -169,9 +166,7 @@ export default function ProfileScreen() {
               onPress={() => router.push(toHref('/workspace'))}
               style={styles.rowLink}>
               <Briefcase size={18} color={SamadhanColors.primary} />
-              <Text style={styles.rowLinkText}>
-                {language === 'hi' ? 'कार्यक्षेत्र खोलें' : 'Open authorized workspace'}
-              </Text>
+              <Text style={styles.rowLinkText}>Open authorized workspace</Text>
               <ChevronRight size={16} color={SamadhanColors.textMuted} />
             </Pressable>
 
@@ -180,9 +175,7 @@ export default function ProfileScreen() {
                 onPress={() => router.push(toHref('/dashboard'))}
                 style={styles.rowLink}>
                 <LayoutDashboard size={18} color={SamadhanColors.primary} />
-                <Text style={styles.rowLinkText}>
-                  {language === 'hi' ? 'प्रशासनिक डैशबोर्ड खोलें' : 'Open government dashboard'}
-                </Text>
+                <Text style={styles.rowLinkText}>Open government dashboard</Text>
                 <ChevronRight size={16} color={SamadhanColors.textMuted} />
               </Pressable>
             ) : null}
@@ -192,73 +185,17 @@ export default function ProfileScreen() {
         {/* SECTION: PREFERENCES & ACCESSIBILITY */}
         <View style={styles.settingsSection}>
           <Text style={[styles.sectionHeading, { fontSize: 15 * fontScale }]}>
-            {language === 'hi' ? 'ऐप सेटिंग्स एवं सुगमता (Accessibility)' : 'Preferences & Accessibility'}
+            Preferences & Accessibility
           </Text>
 
-          {/* 1. Language Toggle */}
-          <View style={styles.settingCard}>
-            <View style={styles.settingHeader}>
-              <Languages size={18} color={SamadhanColors.primary} />
-              <View style={{ flex: 1, marginLeft: 10 }}>
-                <Text style={styles.settingTitle}>
-                  {language === 'hi' ? 'भाषा (Language)' : 'Language'}
-                </Text>
-                <Text style={styles.settingDesc}>
-                  {language === 'hi'
-                    ? 'वर्तमान में हिंदी चयनित है'
-                    : 'Currently English is selected'}
-                </Text>
-              </View>
-            </View>
-            <View style={styles.langPillRow}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Switch language to English"
-                onPress={() => setLanguage('en')}
-                style={[
-                  styles.choicePill,
-                  language === 'en' && styles.choicePillActive,
-                ]}>
-                <Text
-                  style={[
-                    styles.choicePillText,
-                    language === 'en' && styles.choicePillTextActive,
-                  ]}>
-                  English
-                </Text>
-              </Pressable>
-
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Switch language to Hindi"
-                onPress={() => setLanguage('hi')}
-                style={[
-                  styles.choicePill,
-                  language === 'hi' && styles.choicePillActive,
-                ]}>
-                <Text
-                  style={[
-                    styles.choicePillText,
-                    language === 'hi' && styles.choicePillTextActive,
-                  ]}>
-                  हिन्दी (Hindi)
-                </Text>
-              </Pressable>
-            </View>
-          </View>
-
-          {/* 2. Text Size Selector */}
+          {/* 1. Text Size Selector */}
           <View style={styles.settingCard}>
             <View style={styles.settingHeader}>
               <Type size={18} color={SamadhanColors.primary} />
               <View style={{ flex: 1, marginLeft: 10 }}>
-                <Text style={styles.settingTitle}>
-                  {language === 'hi' ? 'अक्षर का आकार (Text Size)' : 'Text Size'}
-                </Text>
+                <Text style={styles.settingTitle}>Text Size</Text>
                 <Text style={styles.settingDesc}>
-                  {language === 'hi'
-                    ? 'दृष्टि सुगमता हेतु बड़ा या सामान्य आकार चुनें'
-                    : 'Adjust text size for comfortable reading'}
+                  Adjust text size for comfortable reading
                 </Text>
               </View>
             </View>
@@ -278,35 +215,21 @@ export default function ProfileScreen() {
                       styles.choicePillText,
                       textSize === sz && styles.choicePillTextActive,
                     ]}>
-                    {sz === 'small'
-                      ? language === 'hi'
-                        ? 'छोटा'
-                        : 'Small'
-                      : sz === 'large'
-                      ? language === 'hi'
-                        ? 'बड़ा (120%)'
-                        : 'Large (120%)'
-                      : language === 'hi'
-                      ? 'सामान्य'
-                      : 'Normal'}
+                    {sz === 'small' ? 'Small' : sz === 'large' ? 'Large (120%)' : 'Normal'}
                   </Text>
                 </Pressable>
               ))}
             </View>
           </View>
 
-          {/* 3. Voice Input Toggle */}
+          {/* 2. Voice Input Toggle */}
           <View style={styles.switchRow}>
             <View style={styles.switchLeft}>
               <Mic size={18} color={SamadhanColors.action} />
               <View style={{ flex: 1, marginLeft: 10 }}>
-                <Text style={styles.settingTitle}>
-                  {language === 'hi' ? 'आवाज़ से दर्ज करने की सुविधा' : 'Voice Input (Mic)'}
-                </Text>
+                <Text style={styles.settingTitle}>Voice Input (Mic)</Text>
                 <Text style={styles.settingDesc}>
-                  {language === 'hi'
-                    ? 'माइक दबाकर बोलकर विवरण लिखना'
-                    : 'Enable voice recording to describe problems'}
+                  Enable voice recording to describe problems
                 </Text>
               </View>
             </View>
@@ -317,18 +240,14 @@ export default function ProfileScreen() {
             />
           </View>
 
-          {/* 4. Data-Saving Mode Toggle */}
+          {/* 3. Data-Saving Mode Toggle */}
           <View style={styles.switchRow}>
             <View style={styles.switchLeft}>
               <Zap size={18} color="#0D9488" />
               <View style={{ flex: 1, marginLeft: 10 }}>
-                <Text style={styles.settingTitle}>
-                  {language === 'hi' ? 'डेटा-बचत मोड (Data Saver)' : 'Data-Saving Mode'}
-                </Text>
+                <Text style={styles.settingTitle}>Data-Saving Mode</Text>
                 <Text style={styles.settingDesc}>
-                  {language === 'hi'
-                    ? '2G/3G नेटवर्क पर छवियों को भारी संकुचित करें'
-                    : 'Heavy compression for slow 2G/3G networks'}
+                  Heavy compression for slow 2G/3G networks
                 </Text>
               </View>
             </View>
@@ -339,7 +258,7 @@ export default function ProfileScreen() {
             />
           </View>
 
-          {/* 5. Offline Drafts shortcut */}
+          {/* 4. Offline Drafts shortcut */}
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Manage Offline Drafts"
@@ -348,39 +267,32 @@ export default function ProfileScreen() {
             <View style={styles.switchLeft}>
               <Bookmark size={18} color={SamadhanColors.primary} />
               <View style={{ flex: 1, marginLeft: 10 }}>
-                <Text style={styles.settingTitle}>
-                  {language === 'hi' ? 'ऑफ़लाइन ड्राफ्ट्स प्रबंधक' : 'Offline Drafts Manager'}
-                </Text>
+                <Text style={styles.settingTitle}>Offline Drafts Manager</Text>
                 <Text style={styles.settingDesc}>
-                  {drafts.length}{' '}
-                  {language === 'hi'
-                    ? 'ड्राफ्ट इस फोन पर सुरक्षित हैं'
-                    : 'report(s) saved on this device'}
+                  {drafts.length} report(s) saved on this device
                 </Text>
               </View>
             </View>
             <ChevronRight size={18} color={SamadhanColors.textMuted} />
           </Pressable>
 
-          {/* 6. Network & Cloud Sync */}
+          {/* 5. Network & Cloud Sync */}
           <View style={styles.settingCard}>
             <View style={styles.settingHeader}>
               <Wifi size={18} color={networkStatus === 'offline' ? '#DC2626' : '#16A34A'} />
               <View style={{ flex: 1, marginLeft: 10 }}>
-                <Text style={styles.settingTitle}>
-                  {language === 'hi' ? 'नेटवर्क व डेटा सिंक' : 'Network & Data Sync'}
-                </Text>
+                <Text style={styles.settingTitle}>Network & Data Sync</Text>
                 <Text style={styles.settingDesc}>
                   {networkStatus === 'offline'
-                    ? (language === 'hi' ? 'ऑफ़लाइन मोड (ड्राफ्ट्स स्थानीय रूप से सुरक्षित)' : 'Offline mode (drafts saved locally)')
-                    : (language === 'hi' ? 'सर्वर से कनेक्टेड (रीयल-टाइम सिंक सक्रिय)' : 'Connected to server (Real-time sync active)')}
+                    ? 'Offline mode (drafts saved locally)'
+                    : 'Connected to server (Real-time sync active)'}
                 </Text>
               </View>
             </View>
             {drafts.length > 0 && (
               <View style={{ marginTop: Spacing.sm }}>
                 <Button
-                  title={language === 'hi' ? `लंबित ड्राफ्ट्स सिंक करें (${drafts.length})` : `Sync Pending Reports (${drafts.length})`}
+                  title={`Sync Pending Reports (${drafts.length})`}
                   onPress={syncDrafts}
                   variant="primary"
                   size="sm"
@@ -393,7 +305,7 @@ export default function ProfileScreen() {
         {/* SECTION: SUPPORT & HELP */}
         <View style={styles.settingsSection}>
           <Text style={[styles.sectionHeading, { fontSize: 15 * fontScale }]}>
-            {language === 'hi' ? 'सहायता एवं संपर्क' : 'Help & Support'}
+            Help & Support
           </Text>
 
           {/* Onboarding Tour */}
@@ -405,13 +317,9 @@ export default function ProfileScreen() {
             <View style={styles.switchLeft}>
               <HelpCircle size={18} color={SamadhanColors.primary} />
               <View style={{ flex: 1, marginLeft: 10 }}>
-                <Text style={styles.settingTitle}>
-                  {language === 'hi' ? 'ऐप परिचय व निर्देश (App Tour)' : 'Welcome & User Guide'}
-                </Text>
+                <Text style={styles.settingTitle}>Welcome & User Guide</Text>
                 <Text style={styles.settingDesc}>
-                  {language === 'hi'
-                    ? 'ऐप का उपयोग कैसे करें, दोबारा देखें'
-                    : 'Review onboarding slides and instructions'}
+                  Review onboarding slides and instructions
                 </Text>
               </View>
             </View>
@@ -423,9 +331,7 @@ export default function ProfileScreen() {
             <View style={styles.switchLeft}>
               <PhoneCall size={18} color="#16A34A" />
               <View style={{ flex: 1, marginLeft: 10 }}>
-                <Text style={styles.settingTitle}>
-                  {language === 'hi' ? 'नागरिक समाधान हेल्पलाइन' : 'Citizen Helpline (Toll-Free)'}
-                </Text>
+                <Text style={styles.settingTitle}>Citizen Helpline (Toll-Free)</Text>
                 <Text style={[styles.settingDesc, { color: '#16A34A', fontWeight: '700' }]}>
                   1800-345-6578 (08:00 AM - 08:00 PM)
                 </Text>
@@ -438,13 +344,9 @@ export default function ProfileScreen() {
             <View style={styles.switchLeft}>
               <ShieldCheck size={18} color={SamadhanColors.primary} />
               <View style={{ flex: 1, marginLeft: 10 }}>
-                <Text style={styles.settingTitle}>
-                  {language === 'hi' ? 'गोपनीयता नीति एवं सहमति' : 'Privacy & Consent Policy'}
-                </Text>
+                <Text style={styles.settingTitle}>Privacy & Consent Policy</Text>
                 <Text style={styles.settingDesc}>
-                  {language === 'hi'
-                    ? 'नागरिकों की व्यक्तिगत जानकारी पूर्ण सुरक्षित है'
-                    : 'Personal mobile details protected under DPDP Act'}
+                  Personal mobile details protected under DPDP Act
                 </Text>
               </View>
             </View>
@@ -454,11 +356,11 @@ export default function ProfileScreen() {
         {/* SECTION: ACCOUNT ACTIONS */}
         <View style={styles.settingsSection}>
           <Text style={[styles.sectionHeading, { fontSize: 15 * fontScale }]}>
-            {language === 'hi' ? 'खाता विकल्प' : 'Account Actions'}
+            Account Actions
           </Text>
 
           <Button
-            title={language === 'hi' ? 'खाता बदलें / पुनः लॉगिन' : 'Switch Account / Login'}
+            title="Switch Account / Login"
             onPress={handleSwitchAccount}
             variant="outline"
             size="md"
@@ -466,7 +368,7 @@ export default function ProfileScreen() {
           />
 
           <Button
-            title={language === 'hi' ? 'लॉग आउट' : 'Logout'}
+            title="Logout"
             onPress={handleLogout}
             variant="ghost"
             size="md"

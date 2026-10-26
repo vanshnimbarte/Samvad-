@@ -37,7 +37,7 @@ export function ChallengeCard({ challenge }: { challenge: Challenge }) {
           </View>
           <View style={[styles.stageChip, { backgroundColor: stage.bg, borderColor: stage.border }]}>
             <Text style={[styles.stageText, { color: stage.color }]}>
-              {openForProposals ? (language === 'hi' ? 'प्रस्ताव खुले' : 'Open for proposals') : language === 'hi' ? stage.labelHi : stage.labelEn}
+              {openForProposals ? 'Open for proposals' : stage.labelEn}
             </Text>
           </View>
         </View>

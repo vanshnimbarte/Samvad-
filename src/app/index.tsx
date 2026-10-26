@@ -111,7 +111,7 @@ export default function CitizenHomeScreen() {
         </View>
 
         <Text style={[styles.sectionHeading, { fontSize: 15 * fontScale, marginBottom: Spacing.md }]}>
-          {language === 'hi' ? 'नवाचार पारिस्थितिकी तंत्र' : 'How a local report becomes a campus project'}
+          How a local report becomes a campus project
         </Text>
         <View style={styles.flowCard}>
           <EcosystemFlow />
@@ -120,31 +120,31 @@ export default function CitizenHomeScreen() {
         <View style={styles.statsRow}>
           <View style={[styles.statCard, { borderLeftColor: SamadhanColors.primary }]}>
             <Text style={styles.statNumber}>{HEADLINE_KPIS.totalChallenges.toLocaleString('en-IN')}</Text>
-            <Text style={styles.statLabel}>{language === 'hi' ? 'चुनौतियां' : 'Challenges'}</Text>
+            <Text style={styles.statLabel}>Challenges</Text>
           </View>
           <View style={[styles.statCard, { borderLeftColor: SamadhanColors.secondary }]}>
             <Text style={[styles.statNumber, { color: SamadhanColors.secondary }]}>{HEADLINE_KPIS.heiPartners}</Text>
-            <Text style={styles.statLabel}>{language === 'hi' ? 'HEI भागीदार' : 'HEI partners'}</Text>
+            <Text style={styles.statLabel}>HEI partners</Text>
           </View>
           <View style={[styles.statCard, { borderLeftColor: SamadhanColors.action }]}>
             <Text style={[styles.statNumber, { color: SamadhanColors.action }]}>{HEADLINE_KPIS.deployed}</Text>
-            <Text style={styles.statLabel}>{language === 'hi' ? 'लागू समाधान' : 'Deployed'}</Text>
+            <Text style={styles.statLabel}>Deployed</Text>
           </View>
         </View>
 
         <View style={styles.quickGrid}>
-          <QuickTile icon={<Compass size={20} color={SamadhanColors.secondary} />} bg="#F0FDFA" label={language === 'hi' ? 'खोजें' : 'Explore'} onPress={() => router.push('/explore')} />
-          <QuickTile icon={<MapPinned size={20} color={SamadhanColors.primary} />} bg="#EFF6FF" label={language === 'hi' ? 'मानचित्र' : 'Map'} onPress={() => router.push(toHref('/map'))} />
-          <QuickTile icon={<Cpu size={20} color="#7C3AED" />} bg="#F5F3FF" label={language === 'hi' ? 'कार्यक्षेत्र' : 'Workspace'} onPress={() => router.push(toHref('/workspace'))} />
-          <QuickTile icon={<Bell size={20} color={SamadhanColors.action} />} bg="#FFF7ED" label={t('notifications')} onPress={() => router.push('/notifications')} />
+          <QuickTile icon={<Compass size={20} color={SamadhanColors.secondary} />} bg="#F0FDFA" label="Explore" onPress={() => router.push('/explore')} />
+          <QuickTile icon={<MapPinned size={20} color={SamadhanColors.primary} />} bg="#EFF6FF" label="Map" onPress={() => router.push(toHref('/map'))} />
+          <QuickTile icon={<Cpu size={20} color="#7C3AED" />} bg="#F5F3FF" label="Workspace" onPress={() => router.push(toHref('/workspace'))} />
+          <QuickTile icon={<Bell size={20} color={SamadhanColors.action} />} bg="#FFF7ED" label="Notifications" onPress={() => router.push('/notifications')} />
         </View>
 
         <View style={styles.sectionHeaderRow}>
           <Text style={[styles.sectionHeading, { fontSize: 15 * fontScale }]}>
-            {language === 'hi' ? 'सक्रिय चुनौतियां' : 'Active challenges'}
+            Active challenges
           </Text>
           <Pressable onPress={() => router.push('/explore')} style={styles.seeAllBtn}>
-            <Text style={styles.seeAllText}>{language === 'hi' ? 'सभी देखें' : 'View all'}</Text>
+            <Text style={styles.seeAllText}>View all</Text>
             <ArrowRight size={14} color={SamadhanColors.primary} />
           </Pressable>
         </View>
@@ -154,10 +154,10 @@ export default function CitizenHomeScreen() {
 
         <View style={styles.sectionHeaderRow}>
           <Text style={[styles.sectionHeading, { fontSize: 15 * fontScale }]}>
-            {language === 'hi' ? 'विश्वविद्यालय एवं उद्योग' : 'Universities & industry'}
+            Universities & industry
           </Text>
           <Pressable onPress={() => router.push(toHref('/ecosystem'))} style={styles.seeAllBtn}>
-            <Text style={styles.seeAllText}>{language === 'hi' ? 'नेटवर्क' : 'Network'}</Text>
+            <Text style={styles.seeAllText}>Network</Text>
             <ArrowRight size={14} color={SamadhanColors.primary} />
           </Pressable>
         </View>

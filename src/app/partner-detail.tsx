@@ -20,7 +20,7 @@ export default function PartnerDetailScreen() {
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <Pressable onPress={() => router.back()} style={styles.back}>
         <ArrowLeft size={20} color={SamadhanColors.primary} />
-        <Text style={styles.backText}>{language === 'hi' ? 'वापस' : 'Back'}</Text>
+        <Text style={styles.backText}>Back</Text>
       </Pressable>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.emoji}>{partner.logoEmoji}</Text>

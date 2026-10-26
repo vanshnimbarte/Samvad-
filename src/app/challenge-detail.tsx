@@ -51,7 +51,7 @@ export default function ChallengeDetailScreen() {
           }}
           style={styles.back}>
           <ArrowLeft size={20} color={SamadhanColors.primary} />
-          <Text style={styles.backText}>{language === 'hi' ? 'वापस' : 'Back'}</Text>
+          <Text style={styles.backText}>Back</Text>
         </Pressable>
         <View style={styles.viewerBadge}>
           <Text style={styles.viewerBadgeText} numberOfLines={1}>
@@ -62,7 +62,7 @@ export default function ChallengeDetailScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <Image source={{ uri: getChallengeImage(challenge) }} style={styles.cover} />
         <View style={[styles.stage, { backgroundColor: stage.bg, borderColor: stage.border }]}>
-          <Text style={[styles.stageText, { color: stage.color }]}>{language === 'hi' ? stage.labelHi : stage.labelEn}</Text>
+          <Text style={[styles.stageText, { color: stage.color }]}>{stage.labelEn}</Text>
         </View>
         <Text style={[styles.title, { fontSize: 20 * fontScale }]}>{challenge.title}</Text>
         <Text style={styles.meta}>
