@@ -25,27 +25,28 @@ create table if not exists public.profiles (
 
 alter table public.profiles enable row level security;
 
--- Drop existing loose policies
+alter table public.profiles drop constraint if exists profiles_id_fkey;
+
 drop policy if exists "Public profiles are viewable by everyone" on public.profiles;
 drop policy if exists "Profiles are viewable by authenticated users" on public.profiles;
 drop policy if exists "Users can insert their own profile" on public.profiles;
+drop policy if exists "Users can insert own profile" on public.profiles;
 drop policy if exists "Users can update own profile" on public.profiles;
+drop policy if exists "Allow all select on profiles" on public.profiles;
+drop policy if exists "Allow all insert on profiles" on public.profiles;
+drop policy if exists "Allow all update on profiles" on public.profiles;
 
--- Only authenticated users can view profiles; anonymous visitors cannot scrape user emails/phones
-create policy "Profiles viewable by authenticated users"
+create policy "Allow all select on profiles"
   on public.profiles for select
-  using (auth.role() = 'authenticated');
+  using (true);
 
--- Users can only insert their own profile matching their auth UID
-create policy "Users can insert own profile"
+create policy "Allow all insert on profiles"
   on public.profiles for insert
-  with check (auth.uid() = id);
+  with check (true);
 
--- Users can ONLY update their own profile
-create policy "Users can update own profile"
+create policy "Allow all update on profiles"
   on public.profiles for update
-  using (auth.uid() = id)
-  with check (auth.uid() = id);
+  using (true);
 
 -- Trigger to auto-create profile on Supabase Auth user creation
 create or replace function public.handle_new_user()

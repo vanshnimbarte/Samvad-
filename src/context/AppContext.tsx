@@ -234,6 +234,14 @@ const DEFAULT_USER = ROLE_PROFILES.citizen;
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+function generateUUID(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const [language, setLanguage] = useState<Language>('en');
@@ -446,12 +454,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return ROLE_PROFILES[role] || prev;
     });
 
+    const targetQuery = supabase.from('profiles').update({
+      role,
+      updated_at: new Date().toISOString(),
+    });
+
     if (session?.user?.id) {
-      supabase
-        .from('profiles')
-        .update({ role, updated_at: new Date().toISOString() })
-        .eq('id', session.user.id)
-        .then();
+      targetQuery.eq('id', session.user.id).then();
+    } else if (user.email) {
+      targetQuery.eq('email', user.email).then();
+    } else if (user.phone) {
+      targetQuery.eq('phone', user.phone).then();
     }
   };
   const [challenges, setChallenges] = useState<Challenge[]>(() => enrichChallenges(CHALLENGES_DATA));
@@ -1297,10 +1310,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return { success: false, requiresEmailConfirmation: false, error: msg };
       }
 
-      if (data?.user?.id) {
-        try {
-          await supabase.from('profiles').upsert({
-            id: data.user.id,
+      const profileId = data?.user?.id || generateUUID();
+      try {
+        await supabase.from('profiles').upsert(
+          {
+            id: profileId,
             email: cleanEmail,
             full_name: cleanName,
             phone: metadata.phone || '',
@@ -1308,8 +1322,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             district: metadata.district || 'Ranchi',
             block: metadata.block || 'Ranchi Sadar',
             community_role: communityRole,
-          });
-        } catch (_) {}
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'email' }
+        );
+      } catch (upsertErr) {
+        console.warn('Profile upsert to Supabase:', upsertErr);
       }
 
       const userObj: UserProfile = {
@@ -1369,6 +1387,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setUser(userObj);
     setUserRoleState(activeRole);
     await saveLocalUserProfile(userObj, activeRole);
+
+    try {
+      const { data: existing } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('phone', cleanPhone)
+        .maybeSingle();
+
+      await supabase.from('profiles').upsert(
+        {
+          id: existing?.id || generateUUID(),
+          phone: cleanPhone,
+          full_name: cleanName,
+          role: activeRole,
+          district: cleanDistrict,
+          block: cleanBlock,
+          community_role: cleanOrg,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'phone' }
+      );
+    } catch (_) {}
+
     showToast(`Logged in as ${cleanName}!`, 'success');
   };
 
@@ -1404,19 +1445,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             role: userRole,
           },
         });
+      }
 
-        await supabase
-          .from('profiles')
-          .update({
-            full_name: profile.name,
-            phone: profile.phone,
-            district: profile.district,
-            block: profile.block,
-            community_role: profile.communityRole,
-            role: userRole,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', session.user.id);
+      const updatePayload = {
+        full_name: profile.name,
+        phone: profile.phone,
+        district: profile.district,
+        block: profile.block,
+        community_role: profile.communityRole,
+        role: userRole,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (session?.user?.id) {
+        await supabase.from('profiles').update(updatePayload).eq('id', session.user.id);
+      } else if (user.email) {
+        await supabase.from('profiles').update(updatePayload).eq('email', user.email);
+      } else if (user.phone) {
+        await supabase.from('profiles').update(updatePayload).eq('phone', user.phone);
       }
     } catch (e) {
       console.warn('Error updating profile in Supabase:', e);
