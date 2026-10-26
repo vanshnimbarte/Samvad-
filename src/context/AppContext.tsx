@@ -1014,47 +1014,104 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const acceptChallenge = (id: string) => {
+    let assignedData: any = null;
+    const defaultUni = UNIVERSITIES_DATA.find((u) => u.name.includes('BIT Mesra') || u.shortName.includes('BIT Mesra')) || UNIVERSITIES_DATA[0];
+
     setChallenges((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, stage: 'In Progress' as ChallengeStage, progressPercent: Math.max(c.progressPercent, 35) } : c))
+      prev.map((c) => {
+        if (c.id !== id) return c;
+        assignedData = c.assignedUniversity || {
+          heiId: defaultUni.id,
+          heiName: defaultUni.name,
+          shortName: defaultUni.shortName,
+          facultyLead: user.name || 'Dr. Anjali Singh',
+          disciplines: defaultUni.disciplines.slice(0, 3),
+          proposalSubmitted: false,
+          teamSize: 4,
+        };
+        return {
+          ...c,
+          stage: 'In Progress' as ChallengeStage,
+          progressPercent: Math.max(c.progressPercent, 35),
+          assignedUniversity: assignedData,
+        };
+      })
     );
-    updateChallengeInSupabase(id, { stage: 'In Progress', progress_percent: 35 });
+    updateChallengeInSupabase(id, {
+      stage: 'In Progress',
+      progress_percent: 35,
+      ...(assignedData ? { assigned_university: assignedData } : {}),
+    });
     showToast('University accepted this challenge.', 'success');
   };
 
   const formProjectTeam = (id: string) => {
+    let assignedData: any = null;
+    const defaultUni = UNIVERSITIES_DATA.find((u) => u.name.includes('BIT Mesra') || u.shortName.includes('BIT Mesra')) || UNIVERSITIES_DATA[0];
+
     setChallenges((prev) =>
-      prev.map((c) =>
-        c.id === id
-          ? {
-              ...c,
-              teamMembers: [
-                { name: c.assignedUniversity?.facultyLead || 'Faculty mentor', role: 'Faculty mentor', discipline: c.assignedUniversity?.disciplines[0] || c.domain },
-                { name: 'Ananya Kujur', role: 'Student lead', discipline: 'Computer Science' },
-                { name: 'Ravi Oraon', role: 'Field researcher', discipline: 'Public Health' },
-                { name: 'Meera Toppo', role: 'Prototype engineer', discipline: 'Electronics' },
-              ],
-              assignedUniversity: c.assignedUniversity ? { ...c.assignedUniversity, teamSize: 8 } : c.assignedUniversity,
-            }
-          : c
-      )
+      prev.map((c) => {
+        if (c.id !== id) return c;
+        assignedData = {
+          ...(c.assignedUniversity || {
+            heiId: defaultUni.id,
+            heiName: defaultUni.name,
+            shortName: defaultUni.shortName,
+            disciplines: defaultUni.disciplines.slice(0, 3),
+            proposalSubmitted: false,
+          }),
+          facultyLead: user.name || c.assignedUniversity?.facultyLead || 'Dr. Anjali Singh',
+          teamSize: 8,
+        };
+        return {
+          ...c,
+          assignedUniversity: assignedData,
+          teamMembers: [
+            { name: assignedData.facultyLead || 'Faculty mentor', role: 'Faculty mentor', discipline: assignedData.disciplines?.[0] || c.domain },
+            { name: 'Ananya Kujur', role: 'Student lead', discipline: 'Computer Science' },
+            { name: 'Ravi Oraon', role: 'Field researcher', discipline: 'Public Health' },
+            { name: 'Meera Toppo', role: 'Prototype engineer', discipline: 'Electronics' },
+          ],
+        };
+      })
     );
+    if (assignedData) {
+      updateChallengeInSupabase(id, { assigned_university: assignedData });
+    }
     showToast('Multidisciplinary student-faculty team constituted.', 'success');
   };
 
   const submitProposal = (id: string) => {
+    let assignedData: any = null;
+    const defaultUni = UNIVERSITIES_DATA.find((u) => u.name.includes('BIT Mesra') || u.shortName.includes('BIT Mesra')) || UNIVERSITIES_DATA[0];
+
     setChallenges((prev) =>
-      prev.map((c) =>
-        c.id === id
-          ? {
-              ...c,
-              stage: 'In Progress' as ChallengeStage,
-              progressPercent: Math.max(c.progressPercent, 45),
-              assignedUniversity: c.assignedUniversity ? { ...c.assignedUniversity, proposalSubmitted: true } : c.assignedUniversity,
-            }
-          : c
-      )
+      prev.map((c) => {
+        if (c.id !== id) return c;
+        assignedData = {
+          ...(c.assignedUniversity || {
+            heiId: defaultUni.id,
+            heiName: defaultUni.name,
+            shortName: defaultUni.shortName,
+            facultyLead: user.name || 'Dr. Anjali Singh',
+            disciplines: defaultUni.disciplines.slice(0, 3),
+            teamSize: 8,
+          }),
+          proposalSubmitted: true,
+        };
+        return {
+          ...c,
+          stage: 'In Progress' as ChallengeStage,
+          progressPercent: Math.max(c.progressPercent, 45),
+          assignedUniversity: assignedData,
+        };
+      })
     );
-    updateChallengeInSupabase(id, { stage: 'In Progress', progress_percent: 45 });
+    updateChallengeInSupabase(id, {
+      stage: 'In Progress',
+      progress_percent: 45,
+      ...(assignedData ? { assigned_university: assignedData } : {}),
+    });
     pushPortalNote('Solution proposal submitted', 'The HEI uploaded a research/innovation proposal for review.', `/challenge-detail?id=${id}`);
     showToast('Proposal submitted to the portal.', 'success');
   };
