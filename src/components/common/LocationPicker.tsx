@@ -7,6 +7,7 @@ import {
   TextInput,
   ActivityIndicator,
 } from 'react-native';
+import * as Location from 'expo-location';
 import {
   MapPin,
   Crosshair,
@@ -37,7 +38,7 @@ interface LocationPickerProps {
 }
 
 export function LocationPicker({ value, onChange }: LocationPickerProps) {
-  const { language, fontScale } = useApp();
+  const { language, fontScale, showToast } = useApp();
   const [detectingGps, setDetectingGps] = useState(false);
   const [mode, setMode] = useState<'gps' | 'manual'>('gps');
 
@@ -49,9 +50,69 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
     (b) => b.name === value.block
   ) || currentDistrictData.blocks[0];
 
-  const handleUseCurrentLocation = () => {
+  const handleUseCurrentLocation = async () => {
     setDetectingGps(true);
-    setTimeout(() => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        showToast(
+          language === 'hi'
+            ? 'जीपीएस अनुमति अस्वीकार कर दी गई।'
+            : 'Location permission was denied. Please select manually.',
+          'error'
+        );
+        setMode('manual');
+        setDetectingGps(false);
+        return;
+      }
+
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+
+      const { latitude, longitude, accuracy } = loc.coords;
+
+      let districtName = value.district || 'Ranchi';
+      let blockName = value.block || 'Ranchi Sadar';
+      let streetAddress = '';
+
+      try {
+        const reverse = await Location.reverseGeocodeAsync({ latitude, longitude });
+        if (reverse && reverse.length > 0) {
+          const first = reverse[0];
+          streetAddress = [first.name, first.street, first.subregion].filter(Boolean).join(', ');
+          const detectedDist = first.district || first.city || first.subregion || '';
+          const match = JHARKHAND_LOCATIONS.find((d) =>
+            d.district.toLowerCase().includes(detectedDist.toLowerCase())
+          );
+          if (match) {
+            districtName = match.district;
+            blockName = match.blocks[0]?.name || blockName;
+          }
+        }
+      } catch (e) {
+        console.warn('Reverse geocode error:', e);
+      }
+
+      onChange({
+        district: districtName,
+        block: blockName,
+        villageOrWard: streetAddress || `${blockName} Area`,
+        address: streetAddress || `GPS: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
+        latitude,
+        longitude,
+        accuracyMeters: accuracy ? Math.round(accuracy) : 8,
+        isGps: true,
+      });
+
+      showToast(
+        language === 'hi' ? 'वास्तविक जीपीएस स्थान प्राप्त हुआ!' : 'Real GPS location captured!',
+        'success'
+      );
+      setMode('gps');
+    } catch (err: any) {
+      console.warn('GPS capture error:', err);
+      // Fallback
       onChange({
         district: 'Ranchi',
         block: 'Ormanjhi',
@@ -59,12 +120,19 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
         address: 'Near NH-33 Junction, Chutupalu',
         latitude: 23.4789,
         longitude: 85.4789,
-        accuracyMeters: 6,
+        accuracyMeters: 10,
         isGps: true,
       });
-      setDetectingGps(false);
+      showToast(
+        language === 'hi'
+          ? 'जीपीएस त्रुटि: डिफ़ॉल्ट स्थान उपयोग किया गया।'
+          : 'Could not access GPS hardware: using default area.',
+        'info'
+      );
       setMode('gps');
-    }, 1000);
+    } finally {
+      setDetectingGps(false);
+    }
   };
 
   return (

@@ -8,7 +8,16 @@ import {
   insertReportToSupabase,
   insertChallengeCommentToSupabase,
   insertReportCommentToSupabase,
+  toggleChallengeUpvoteInSupabase,
+  toggleReportSupportInSupabase,
+  updateChallengeInSupabase,
 } from '@/lib/supabase';
+import {
+  loadSavedDrafts,
+  persistDrafts,
+  loadSupportedProblems,
+  persistSupportedProblems,
+} from '@/lib/local-storage';
 import {
   CivicReport,
   CivicNotification,
@@ -370,6 +379,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       });
     });
 
+    // Load saved drafts from offline storage
+    loadSavedDrafts().then((savedDrafts) => {
+      if (!mounted || !savedDrafts || savedDrafts.length === 0) return;
+      setDrafts((prev) => {
+        const ids = new Set(savedDrafts.map((d) => d.id));
+        const filtered = prev.filter((d) => !ids.has(d.id));
+        return [...savedDrafts, ...filtered];
+      });
+    });
+
+    // Load persisted supported problems
+    loadSupportedProblems().then((savedSupports) => {
+      if (!mounted || !savedSupports) return;
+      setSupportedProblemIds((prev) => ({ ...prev, ...savedSupports }));
+    });
+
     return () => {
       mounted = false;
       subscription.unsubscribe();
@@ -444,22 +469,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Upvoting logic
   const toggleSupportProblem = (reportId: string) => {
     const currentlySupported = !!supportedProblemIds[reportId];
-    setSupportedProblemIds((prev) => ({
-      ...prev,
+    const newSupports = {
+      ...supportedProblemIds,
       [reportId]: !currentlySupported,
-    }));
+    };
+    setSupportedProblemIds(newSupports);
+    persistSupportedProblems(newSupports);
 
+    let updatedSupporters = 0;
     setReports((prev) =>
       prev.map((r) => {
         if (r.id === reportId) {
+          updatedSupporters = currentlySupported ? Math.max(0, r.supporters - 1) : r.supporters + 1;
           return {
             ...r,
-            supporters: currentlySupported ? Math.max(0, r.supporters - 1) : r.supporters + 1,
+            supporters: updatedSupporters,
           };
         }
         return r;
       })
     );
+
+    if (session?.user?.id) {
+      toggleReportSupportInSupabase(reportId, session.user.id, currentlySupported, updatedSupporters);
+    }
 
     showToast(
       currentlySupported
@@ -645,7 +678,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       savedAt: 'Just now (Saved on this device)',
     };
 
-    setDrafts((prev) => [newDraft, ...prev]);
+    setDrafts((prev) => {
+      const updated = [newDraft, ...prev];
+      persistDrafts(updated);
+      return updated;
+    });
     showToast(
       language === 'hi'
         ? 'ड्राफ्ट फोन में सुरक्षित सहेजा गया।'
@@ -656,7 +693,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteDraft = (draftId: string) => {
-    setDrafts((prev) => prev.filter((d) => d.id !== draftId));
+    setDrafts((prev) => {
+      const updated = prev.filter((d) => d.id !== draftId);
+      persistDrafts(updated);
+      return updated;
+    });
     showToast(
       language === 'hi' ? 'ड्राफ्ट हटा दिया गया।' : 'Draft deleted.',
       'info'
@@ -872,7 +913,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const supportChallenge = (id: string) => {
-    setChallenges((prev) => prev.map((c) => (c.id === id ? { ...c, upvotes: c.upvotes + 1 } : c)));
+    let newUpvotes = 1;
+    setChallenges((prev) =>
+      prev.map((c) => {
+        if (c.id === id) {
+          newUpvotes = c.upvotes + 1;
+          return { ...c, upvotes: newUpvotes };
+        }
+        return c;
+      })
+    );
+    if (session?.user?.id) {
+      toggleChallengeUpvoteInSupabase(id, session.user.id, false, newUpvotes);
+    }
     showToast('You supported this community challenge.', 'success');
   };
 
@@ -897,7 +950,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const validateChallenge = (id: string) => {
-    setChallenges((prev) => prev.map((c) => (c.id === id ? { ...c, stage: 'Validated' as ChallengeStage, progressPercent: Math.max(c.progressPercent, 18) } : c)));
+    let updatedProgress = 18;
+    setChallenges((prev) =>
+      prev.map((c) => {
+        if (c.id === id) {
+          updatedProgress = Math.max(c.progressPercent, 18);
+          return { ...c, stage: 'Validated' as ChallengeStage, progressPercent: updatedProgress };
+        }
+        return c;
+      })
+    );
+    updateChallengeInSupabase(id, { stage: 'Validated', progress_percent: updatedProgress });
     pushPortalNote('Challenge validated', 'An administrator confirmed this as a genuine societal challenge.', `/challenge-detail?id=${id}`);
     showToast('Challenge validated and opened for universities.', 'success');
   };
@@ -920,6 +983,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const assignUniversity = (id: string, heiId: string) => {
     const uni = UNIVERSITIES_DATA.find((u) => u.id === heiId);
     if (!uni) return;
+    const assignment = {
+      heiId: uni.id,
+      heiName: uni.name,
+      heiShortName: uni.shortName,
+      facultyLead: `Faculty coordinator, ${uni.shortName}`,
+      teamSize: 0,
+      disciplines: uni.disciplines.slice(0, 3),
+      proposalSubmitted: false,
+    };
     setChallenges((prev) =>
       prev.map((c) =>
         c.id === id
@@ -927,25 +999,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               ...c,
               stage: 'Assigned' as ChallengeStage,
               progressPercent: Math.max(c.progressPercent, 28),
-              assignedUniversity: {
-                heiId: uni.id,
-                heiName: uni.name,
-                heiShortName: uni.shortName,
-                facultyLead: `Faculty coordinator, ${uni.shortName}`,
-                teamSize: 0,
-                disciplines: uni.disciplines.slice(0, 3),
-                proposalSubmitted: false,
-              },
+              assignedUniversity: assignment,
             }
           : c
       )
     );
+    updateChallengeInSupabase(id, {
+      assigned_university: assignment,
+      stage: 'Assigned',
+      progress_percent: 28,
+    });
     pushPortalNote('Routed to university', `${uni.shortName} received this challenge based on domain expertise.`, `/challenge-detail?id=${id}`);
     showToast(`Routed to ${uni.shortName}.`, 'success');
   };
 
   const acceptChallenge = (id: string) => {
-    setChallenges((prev) => prev.map((c) => (c.id === id ? { ...c, stage: 'In Progress' as ChallengeStage, progressPercent: Math.max(c.progressPercent, 35) } : c)));
+    setChallenges((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, stage: 'In Progress' as ChallengeStage, progressPercent: Math.max(c.progressPercent, 35) } : c))
+    );
+    updateChallengeInSupabase(id, { stage: 'In Progress', progress_percent: 35 });
     showToast('University accepted this challenge.', 'success');
   };
 
@@ -982,33 +1054,43 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           : c
       )
     );
+    updateChallengeInSupabase(id, { stage: 'In Progress', progress_percent: 45 });
     pushPortalNote('Solution proposal submitted', 'The HEI uploaded a research/innovation proposal for review.', `/challenge-detail?id=${id}`);
     showToast('Proposal submitted to the portal.', 'success');
   };
 
   const offerIndustrySupport: AppContextType['offerIndustrySupport'] = (id, partnerId, kind) => {
     const partner = INDUSTRY_PARTNERS_DATA.find((p) => p.id === partnerId) || INDUSTRY_PARTNERS_DATA[0];
+    const partnerData = {
+      partnerId: partner.id,
+      companyName: partner.companyName,
+      type: partner.type,
+      contributionType: [kind],
+      fundingAmount: kind === 'Funding' ? partner.totalFundingCommitted : undefined,
+    };
     setChallenges((prev) =>
       prev.map((c) =>
         c.id === id
           ? {
               ...c,
               industryPartner: {
-                partnerId: partner.id,
-                companyName: partner.companyName,
-                type: partner.type,
-                contributionType: [kind],
+                ...partnerData,
                 fundingAmount: kind === 'Funding' ? partner.totalFundingCommitted : c.industryPartner?.fundingAmount,
               },
             }
           : c
       )
     );
+    updateChallengeInSupabase(id, { industry_partner: partnerData });
     pushPortalNote('Industry joined the project', `${partner.shortName} offered ${kind.toLowerCase()}.`, `/challenge-detail?id=${id}`);
     showToast(`${partner.shortName} will ${kind.toLowerCase()}.`, 'success');
   };
 
   const toggleMilestone = (id: string, milestoneId: string) => {
+    let updatedMilestones: any[] = [];
+    let updatedProgress = 0;
+    let updatedStage = 'Submitted';
+
     setChallenges((prev) =>
       prev.map((c) => {
         if (c.id !== id) return c;
@@ -1020,9 +1102,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         let stage = c.stage;
         if (progressPercent >= 100) stage = 'Deployed';
         else if (progressPercent >= 70) stage = 'Pilot Testing';
+
+        updatedMilestones = milestones;
+        updatedProgress = progressPercent;
+        updatedStage = stage;
+
         return { ...c, milestones, progressPercent, stage };
       })
     );
+
+    updateChallengeInSupabase(id, {
+      milestones: updatedMilestones,
+      progress_percent: updatedProgress,
+      stage: updatedStage,
+    });
   };
 
   // Auth actions

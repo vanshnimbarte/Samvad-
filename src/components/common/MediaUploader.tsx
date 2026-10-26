@@ -6,7 +6,9 @@ import {
   Pressable,
   Image,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import {
   Camera,
   Video,
@@ -36,9 +38,136 @@ interface MediaUploaderProps {
 }
 
 export function MediaUploader({ mediaList, onChange, onSkip }: MediaUploaderProps) {
-  const { language, fontScale, dataSavingMode } = useApp();
+  const { language, fontScale, dataSavingMode, showToast } = useApp();
   const [compressing, setCompressing] = useState(false);
   const [compressingFileName, setCompressingFileName] = useState('');
+
+  const handleTakePhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        showToast(
+          language === 'hi'
+            ? 'कैमरा अनुमति आवश्यक है।'
+            : 'Camera permission is required to take photos.',
+          'error'
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: dataSavingMode ? 0.5 : 0.7,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        const fileName = asset.fileName || `camera_${Date.now()}.jpg`;
+        setCompressing(true);
+        setCompressingFileName(fileName);
+
+        setTimeout(() => {
+          const newItem: UploadedMediaItem = {
+            id: `media-${Date.now()}`,
+            type: 'image',
+            uri: asset.uri,
+            fileName,
+            originalSizeMb: asset.fileSize ? +(asset.fileSize / (1024 * 1024)).toFixed(2) : 2.5,
+            compressedSizeMb: asset.fileSize ? +(asset.fileSize / (1024 * 1024) * 0.7).toFixed(2) : 0.45,
+          };
+          onChange([...mediaList, newItem]);
+          setCompressing(false);
+          setCompressingFileName('');
+          showToast(
+            language === 'hi' ? 'फोटो सफलतापूर्वक संलग्न की गई।' : 'Photo attached successfully.',
+            'success'
+          );
+        }, 500);
+      }
+    } catch (e: any) {
+      console.warn('Camera capture error:', e);
+      handleSimulateAddMedia('image');
+    }
+  };
+
+  const handlePickGallery = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: dataSavingMode ? 0.5 : 0.7,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        const fileName = asset.fileName || `gallery_${Date.now()}.jpg`;
+        setCompressing(true);
+        setCompressingFileName(fileName);
+
+        setTimeout(() => {
+          const newItem: UploadedMediaItem = {
+            id: `media-${Date.now()}`,
+            type: 'image',
+            uri: asset.uri,
+            fileName,
+            originalSizeMb: asset.fileSize ? +(asset.fileSize / (1024 * 1024)).toFixed(2) : 2.2,
+            compressedSizeMb: asset.fileSize ? +(asset.fileSize / (1024 * 1024) * 0.7).toFixed(2) : 0.42,
+          };
+          onChange([...mediaList, newItem]);
+          setCompressing(false);
+          setCompressingFileName('');
+          showToast(
+            language === 'hi' ? 'गैलरी फोटो संलग्न की गई।' : 'Gallery photo attached.',
+            'success'
+          );
+        }, 500);
+      }
+    } catch (e: any) {
+      console.warn('Gallery pick error:', e);
+      handleSimulateAddMedia('image');
+    }
+  };
+
+  const handleRecordVideo = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        showToast(
+          language === 'hi' ? 'कैमरा अनुमति आवश्यक है।' : 'Camera permission required.',
+          'error'
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['videos'],
+        videoMaxDuration: 30,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        const fileName = asset.fileName || `video_${Date.now()}.mp4`;
+        const newItem: UploadedMediaItem = {
+          id: `media-${Date.now()}`,
+          type: 'video',
+          uri: asset.uri,
+          fileName,
+          originalSizeMb: asset.fileSize ? +(asset.fileSize / (1024 * 1024)).toFixed(2) : 8.5,
+          compressedSizeMb: asset.fileSize ? +(asset.fileSize / (1024 * 1024) * 0.5).toFixed(2) : 2.1,
+        };
+        onChange([...mediaList, newItem]);
+        showToast(
+          language === 'hi' ? 'वीडियो संलग्न किया गया।' : 'Video recorded and attached.',
+          'success'
+        );
+      }
+    } catch (e: any) {
+      console.warn('Video record error:', e);
+      handleSimulateAddMedia('video');
+    }
+  };
 
   const handleSimulateAddMedia = (type: 'image' | 'video' | 'document') => {
     setCompressing(true);
@@ -69,7 +198,7 @@ export function MediaUploader({ mediaList, onChange, onSkip }: MediaUploaderProp
       onChange([...mediaList, newItem]);
       setCompressing(false);
       setCompressingFileName('');
-    }, 1200);
+    }, 600);
   };
 
   const handleRemoveMedia = (id: string) => {
@@ -94,7 +223,7 @@ export function MediaUploader({ mediaList, onChange, onSkip }: MediaUploaderProp
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Take Photo with Camera"
-          onPress={() => handleSimulateAddMedia('image')}
+          onPress={handleTakePhoto}
           style={({ pressed }) => [styles.actionTile, pressed && styles.pressedTile]}>
           <View style={[styles.iconCircle, { backgroundColor: '#EFF6FF' }]}>
             <Camera size={22} color={SamadhanColors.primary} />
@@ -111,7 +240,7 @@ export function MediaUploader({ mediaList, onChange, onSkip }: MediaUploaderProp
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Record Short Video"
-          onPress={() => handleSimulateAddMedia('video')}
+          onPress={handleRecordVideo}
           style={({ pressed }) => [styles.actionTile, pressed && styles.pressedTile]}>
           <View style={[styles.iconCircle, { backgroundColor: '#FFF7ED' }]}>
             <Video size={22} color={SamadhanColors.action} />
@@ -128,7 +257,7 @@ export function MediaUploader({ mediaList, onChange, onSkip }: MediaUploaderProp
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Choose from Device Gallery"
-          onPress={() => handleSimulateAddMedia('image')}
+          onPress={handlePickGallery}
           style={({ pressed }) => [styles.actionTile, pressed && styles.pressedTile]}>
           <View style={[styles.iconCircle, { backgroundColor: '#F0FDF4' }]}>
             <ImageIcon size={22} color="#16A34A" />

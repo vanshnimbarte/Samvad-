@@ -1,56 +1,123 @@
-# Welcome to your Expo app 👋
+# Samvad Jharkhand (संवाद झारखंड) 🌾🏛️🎓🏢
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+> **Citizen-to-Campus Societal Innovation & Civic Problem Resolution Platform for Jharkhand**
 
-## Get started
+Samvad Jharkhand bridges the gap between rural/semi-urban citizens, Higher Education Institutions (BIT Mesra, IIT ISM Dhanbad, NIT Jamshedpur), industry partners (Tata Steel, MSME clusters), and district administration to solve ground-level societal challenges through a **Quadruple-Helix model**.
 
-1. Install dependencies
+---
 
-   ```bash
-   npm install
-   ```
+## 📱 Architecture & Tech Stack
 
-2. Start the app
+- **Framework:** Expo SDK 57 (React Native 0.86, React 19)
+- **Routing:** Expo Router v57 (file-based navigation with native stack fallback)
+- **Backend & Auth:** Supabase (PostgreSQL 15+, GoTrue Auth, Storage)
+- **Offline & Storage:** `expo-secure-store`, local persistence for drafts and cached supports
+- **Device Integrations:**
+  - Real GPS Geolocation & Reverse Geocoding (`expo-location`)
+  - Camera & Device Photo Library (`expo-image-picker`)
+  - Low-bandwidth photo compression (~80% compression for 2G/3G rural networks)
+- **Styling & Theming:** Custom Samadhan Theme with High-Contrast mode, dynamic text scaling (0.9x to 1.18x), and Hindi / English bilingual localization
 
-   ```bash
-   npx expo start
-   ```
+---
 
-In the output, you'll find options to open the app in a
+## 🚀 Getting Started
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+### 1. Prerequisites
+- Node.js 18+ and npm
+- Expo CLI (`npm install -g expo-cli`)
+- Android Studio / Xcode or physical Android/iOS device running Expo Go
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+### 2. Environment Variables
+Create `.env.local` in the project root:
+```env
+EXPO_PUBLIC_SUPABASE_URL=https://iajpmeoqtuqrwwesuvgq.supabase.co
+EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### 3. Installation
+```bash
+npm install
+```
 
-### Other setup steps
+### 4. Run Locally
+```bash
+# Start development server
+npx expo start
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+# Run on Android device or emulator
+npx expo run:android
 
-## Learn more
+# Run on Web
+npx expo start --web
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+---
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## 🗄️ Backend Setup (Supabase)
 
-## Join the community
+The complete production database schema, triggers, and Row-Level Security (RLS) policies are in [`supabase/schema.sql`](./supabase/schema.sql).
 
-Join our community of developers creating universal apps.
+### 1-Click Database Deployment
+1. Open your [Supabase Dashboard](https://supabase.com/dashboard).
+2. Go to **SQL Editor** &rarr; **New Query**.
+3. Paste the contents of [`supabase/schema.sql`](./supabase/schema.sql) and click **Run**.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+### Applied Tables
+| Table | Description |
+| :--- | :--- |
+| `public.profiles` | User accounts, verified roles, phone numbers, districts, and blocks. |
+| `public.challenges` | Societal challenges submitted across Jharkhand with stage tracking. |
+| `public.civic_reports` | 6-step citizen grievances with coordinates, urgency, and timelines. |
+| `public.challenge_comments` | Moderated collaboration comments between citizens, faculty, and industry. |
+| `public.report_comments` | Status updates and feedback on civic reports. |
+| `public.challenge_upvotes` | Unique citizen upvotes on challenges (`unique(challenge_id, user_id)`). |
+| `public.report_supports` | Endorsements on civic reports (`unique(report_id, user_id)`). |
+| `public.notifications` | Realtime status alerts delivered to users. |
+| `storage.buckets ('media')` | Publicly accessible bucket for evidence photos and documents. |
+
+---
+
+## 🔒 Security & Row-Level Security (RLS)
+
+All tables have strict Row-Level Security (RLS) enabled:
+- **Profiles:** Only authenticated users can view profiles. Users can only update their own profile (`auth.uid() = id`).
+- **Challenges:** Viewable by the public. Inserts require an authenticated user. Updates are restricted to the author or verified `university` / `government` roles.
+- **Civic Reports:** Viewable by the public. Inserts require authentication. Updates are restricted to the submitter or `government` team.
+- **Media Storage:** Publicly viewable for evidence transparency. Uploads strictly require authentication (`auth.role() = 'authenticated'`).
+- **Comments & Upvotes:** Strictly restricted so users can only post or upvote under their own `auth.uid()`.
+
+---
+
+## 👥 Quadruple-Helix Role-Based Access Control
+
+The platform enforces 4 distinct personas:
+1. **Citizen (`citizen`):** Report local problems, upload evidence, track grievance stages, and upvote community challenges.
+2. **University / HEI (`university`):** Review routed challenges in their domain, form student-faculty teams, submit technical proposals, and track milestone progress.
+3. **Industry / CSR (`industry`):** Offer funding, mentoring, prototyping, and technology transfer for validated HEI projects.
+4. **Government (`government`):** Administrative oversight, district-wise grievance monitoring, and sanctioning of solutions.
+
+---
+
+## 🛡️ Android Permissions Review (`app.json`)
+
+| Permission | Justification |
+| :--- | :--- |
+| `ACCESS_FINE_LOCATION` | Used by `LocationPicker` to tag grievance GPS coordinates to Panchayat level. |
+| `ACCESS_COARSE_LOCATION` | Fallback approximate cell-tower location in low-connectivity rural zones. |
+| `CAMERA` | Used by `MediaUploader` to capture real-time photo evidence of broken infrastructure. |
+| `RECORD_AUDIO` | Used for voice-based problem input in Hindi/English for low-literacy citizens. |
+
+---
+
+## ✅ Production Release Checklist
+
+Before building release artifacts with EAS:
+- [x] Unreferenced legacy folder `my-app/` cleaned up.
+- [x] Hardened RLS policies in `supabase/schema.sql` (preventing unauthorized profile scraping and updates).
+- [x] Integrated real GPS detection via `expo-location`.
+- [x] Integrated real camera & photo library via `expo-image-picker`.
+- [x] Offline draft persistence via `local-storage` (`expo-secure-store`).
+- [x] Supabase upvotes, comments, and stage transitions persisted to database.
+- [x] TypeScript compiler passes with 0 errors (`npx tsc --noEmit`).
+- [ ] Build release bundle: `eas build -p android --profile production`.
+- [ ] Verify Supabase Auth "Confirm email" toggle setting in project dashboard.

@@ -307,3 +307,83 @@ export async function insertReportCommentToSupabase(
     return false;
   }
 }
+
+export async function toggleChallengeUpvoteInSupabase(
+  challengeId: string,
+  userId: string,
+  isCurrentlyUpvoted: boolean,
+  newUpvoteCount: number
+): Promise<boolean> {
+  try {
+    if (isCurrentlyUpvoted) {
+      await supabase
+        .from('challenge_upvotes')
+        .delete()
+        .eq('challenge_id', challengeId)
+        .eq('user_id', userId);
+    } else {
+      await supabase.from('challenge_upvotes').upsert({
+        challenge_id: challengeId,
+        user_id: userId,
+      });
+    }
+
+    await supabase
+      .from('challenges')
+      .update({ upvotes: Math.max(0, newUpvoteCount) })
+      .eq('id', challengeId);
+
+    return true;
+  } catch (e) {
+    console.warn('toggleChallengeUpvoteInSupabase error:', e);
+    return false;
+  }
+}
+
+export async function toggleReportSupportInSupabase(
+  reportId: string,
+  userId: string,
+  isCurrentlySupported: boolean,
+  newSupportCount: number
+): Promise<boolean> {
+  try {
+    if (isCurrentlySupported) {
+      await supabase
+        .from('report_supports')
+        .delete()
+        .eq('report_id', reportId)
+        .eq('user_id', userId);
+    } else {
+      await supabase.from('report_supports').upsert({
+        report_id: reportId,
+        user_id: userId,
+      });
+    }
+
+    await supabase
+      .from('civic_reports')
+      .update({ supporters: Math.max(0, newSupportCount) })
+      .eq('id', reportId);
+
+    return true;
+  } catch (e) {
+    console.warn('toggleReportSupportInSupabase error:', e);
+    return false;
+  }
+}
+
+export async function updateChallengeInSupabase(
+  challengeId: string,
+  updates: Record<string, any>
+): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('challenges')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', challengeId);
+    return !error;
+  } catch (e) {
+    console.warn('updateChallengeInSupabase error:', e);
+    return false;
+  }
+}
