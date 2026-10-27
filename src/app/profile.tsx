@@ -6,7 +6,9 @@ import {
   ScrollView,
   Pressable,
   Switch,
-  Alert,
+  Modal,
+  TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -33,6 +35,8 @@ import {
   Briefcase,
   Wifi,
   RefreshCw,
+  Edit2,
+  X,
 } from 'lucide-react-native';
 
 import { Header } from '@/components/common/Header';
@@ -69,10 +73,57 @@ export default function ProfileScreen() {
     showToast,
     userRole,
     setUserRole,
+    updateUserProfile,
   } = useApp();
 
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [locationPermGranted, setLocationPermGranted] = useState(true);
+
+  // Edit Profile Modal state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(user.name);
+  const [editPhone, setEditPhone] = useState(user.phone || '');
+  const [editDistrict, setEditDistrict] = useState(user.district || 'Ranchi');
+  const [editBlock, setEditBlock] = useState(user.block || 'Ranchi Sadar');
+  const [editCommunityRole, setEditCommunityRole] = useState(user.communityRole || '');
+  const [selectedRole, setSelectedRole] = useState<UserRole>(userRole);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleOpenEdit = () => {
+    setEditName(user.name);
+    setEditPhone(user.phone || '');
+    setEditDistrict(user.district || 'Ranchi');
+    setEditBlock(user.block || 'Ranchi Sadar');
+    setEditCommunityRole(user.communityRole || '');
+    setSelectedRole(userRole);
+    setIsEditing(true);
+  };
+
+  const handleSaveProfile = async () => {
+    if (!editName.trim()) {
+      showToast('Name cannot be empty', 'error');
+      return;
+    }
+    setIsSaving(true);
+    try {
+      if (selectedRole !== userRole) {
+        setUserRole(selectedRole);
+      }
+      await updateUserProfile({
+        name: editName.trim(),
+        phone: editPhone.trim(),
+        district: editDistrict.trim(),
+        block: editBlock.trim(),
+        communityRole: editCommunityRole.trim() || undefined,
+      });
+      showToast('Profile updated and synced with cloud!', 'success');
+      setIsEditing(false);
+    } catch (e: any) {
+      showToast(e?.message || 'Failed to update profile', 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const handleSwitchAccount = () => {
     router.push('/auth');
@@ -129,13 +180,23 @@ export default function ProfileScreen() {
             ) : null}
             {session?.user ? (
               <View style={[styles.detailRow, { marginTop: 4 }]}>
-                <ShieldCheck size={14} color="#16A34A" />
-                <Text style={[styles.detailText, { color: '#16A34A', fontWeight: '700' }]}>
-                  Supabase Authenticated (ID: {session.user.id.substring(0, 8)}...)
+                <ShieldCheck size={14} color="#2563EB" />
+                <Text style={[styles.detailText, { color: '#2563EB', fontWeight: '700' }]}>
+                  Clerk Authenticated (ID: {session.user.id.substring(0, 8)}...)
                 </Text>
               </View>
             ) : null}
           </View>
+
+          {/* Edit Profile Button */}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Edit Profile Details"
+            onPress={handleOpenEdit}
+            style={styles.editProfileBtn}>
+            <Edit2 size={13} color={SamadhanColors.primary} />
+            <Text style={styles.editProfileBtnText}>Edit Profile</Text>
+          </Pressable>
         </View>
 
         <View style={styles.settingsSection}>
@@ -158,9 +219,31 @@ export default function ProfileScreen() {
                 Active session
               </Text>
             </View>
-            <Text style={{ fontSize: 13, color: SamadhanColors.textSecondary, marginBottom: Spacing.md }}>
+            <Text style={{ fontSize: 13, color: SamadhanColors.textSecondary, marginBottom: Spacing.xs }}>
               {user.communityRole}
             </Text>
+
+            {/* Quick Stakeholder Role Switcher */}
+            <View style={{ marginTop: Spacing.sm, marginBottom: Spacing.sm }}>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: SamadhanColors.textSecondary, marginBottom: 6 }}>
+                Switch Stakeholder Role:
+              </Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                {(['citizen', 'university', 'industry', 'government'] as UserRole[]).map((r) => (
+                  <Pressable
+                    key={r}
+                    onPress={() => setUserRole(r)}
+                    style={[
+                      styles.roleChip,
+                      userRole === r && styles.roleChipActive,
+                    ]}>
+                    <Text style={[styles.roleChipText, userRole === r && styles.roleChipTextActive]}>
+                      {r === 'citizen' ? '👤 Citizen' : r === 'university' ? '🎓 University' : r === 'industry' ? '🏢 Industry' : '🏛️ Govt'}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
 
             <Pressable
               onPress={() => router.push(toHref('/workspace'))}
@@ -378,6 +461,112 @@ export default function ProfileScreen() {
 
         <View style={{ height: 100 }} />
       </ScrollView>
+
+      {/* Edit Profile Modal */}
+      <Modal
+        visible={isEditing}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setIsEditing(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, Shadows.lg]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Edit Profile</Text>
+              <Pressable onPress={() => setIsEditing(false)} hitSlop={8}>
+                <X size={20} color={SamadhanColors.textMuted} />
+              </Pressable>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 380 }}>
+              <Text style={styles.inputLabel}>Full Name *</Text>
+              <TextInput
+                style={styles.modalInput}
+                value={editName}
+                onChangeText={setEditName}
+                placeholder="Enter your full name"
+                placeholderTextColor={SamadhanColors.textMuted}
+              />
+
+              <Text style={styles.inputLabel}>Phone Number</Text>
+              <TextInput
+                style={styles.modalInput}
+                value={editPhone}
+                onChangeText={setEditPhone}
+                keyboardType="phone-pad"
+                placeholder="+91 98351 44210"
+                placeholderTextColor={SamadhanColors.textMuted}
+              />
+
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.inputLabel}>District</Text>
+                  <TextInput
+                    style={styles.modalInput}
+                    value={editDistrict}
+                    onChangeText={setEditDistrict}
+                    placeholder="e.g. Ranchi"
+                    placeholderTextColor={SamadhanColors.textMuted}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.inputLabel}>Block</Text>
+                  <TextInput
+                    style={styles.modalInput}
+                    value={editBlock}
+                    onChangeText={setEditBlock}
+                    placeholder="e.g. Kanke"
+                    placeholderTextColor={SamadhanColors.textMuted}
+                  />
+                </View>
+              </View>
+
+              <Text style={styles.inputLabel}>Community Role / Designation</Text>
+              <TextInput
+                style={styles.modalInput}
+                value={editCommunityRole}
+                onChangeText={setEditCommunityRole}
+                placeholder="e.g. Citizen Member, Ward Lead"
+                placeholderTextColor={SamadhanColors.textMuted}
+              />
+
+              <Text style={styles.inputLabel}>Stakeholder Role</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: Spacing.md }}>
+                {(['citizen', 'university', 'industry', 'government'] as UserRole[]).map((r) => (
+                  <Pressable
+                    key={r}
+                    onPress={() => setSelectedRole(r)}
+                    style={[
+                      styles.roleChip,
+                      selectedRole === r && styles.roleChipActive,
+                    ]}>
+                    <Text style={[styles.roleChipText, selectedRole === r && styles.roleChipTextActive]}>
+                      {r === 'citizen' ? '👤 Citizen' : r === 'university' ? '🎓 University' : r === 'industry' ? '🏢 Industry' : '🏛️ Govt'}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalActions}>
+              <Button
+                title="Cancel"
+                variant="ghost"
+                size="md"
+                onPress={() => setIsEditing(false)}
+                style={{ flex: 1 }}
+              />
+              <Button
+                title={isSaving ? 'Saving...' : 'Save Changes'}
+                variant="primary"
+                size="md"
+                onPress={handleSaveProfile}
+                disabled={isSaving}
+                style={{ flex: 1 }}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -561,5 +750,95 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     marginBottom: Spacing.sm,
     minHeight: 56,
+  },
+  editProfileBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    marginTop: Spacing.sm,
+    borderWidth: 1,
+    borderColor: SamadhanColors.primary + '30',
+    backgroundColor: SamadhanColors.primarySurface,
+    borderRadius: Radius.md,
+  },
+  editProfileBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: SamadhanColors.primary,
+  },
+  roleChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: Radius.full,
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  roleChipActive: {
+    backgroundColor: SamadhanColors.primarySurface,
+    borderColor: SamadhanColors.primary,
+  },
+  roleChipText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: SamadhanColors.textSecondary,
+  },
+  roleChipTextActive: {
+    color: SamadhanColors.primary,
+    fontWeight: '800',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalCard: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: Radius.xl,
+    borderTopRightRadius: Radius.xl,
+    padding: Spacing.lg,
+    maxHeight: '85%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.md,
+    paddingBottom: Spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: SamadhanColors.textPrimary,
+  },
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: SamadhanColors.textSecondary,
+    marginBottom: 4,
+    marginTop: Spacing.xs,
+  },
+  modalInput: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: Radius.md,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 13,
+    color: SamadhanColors.textPrimary,
+    marginBottom: Spacing.xs,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: Spacing.md,
+    paddingTop: Spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
   },
 });

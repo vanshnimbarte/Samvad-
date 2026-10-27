@@ -21,9 +21,15 @@ export default function WorkspaceScreen() {
     assignUniversity,
     mergeAsDuplicate,
     user,
+    session,
   } = useApp();
 
-  const mine = challenges.filter((c) => c.isUserChallenge || c.submittedBy === user.name);
+  const mine = challenges.filter(
+    (c) =>
+      c.isUserChallenge ||
+      (session?.user?.id && (c as any).userId === session.user.id) ||
+      (user?.name && c.submittedBy === user.name)
+  );
   const pending = challenges.filter((c) => c.stage === 'Submitted' || c.stage === 'Under Review');
   const duplicates = challenges.filter((c) => (c.similarChallengeIds || []).length > 0 && (c.stage === 'Submitted' || c.stage === 'Under Review'));
   const assigned = challenges.filter((c) => c.assignedUniversity);

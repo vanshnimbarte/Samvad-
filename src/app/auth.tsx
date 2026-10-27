@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useSignIn, useSignUp } from '@clerk/expo';
+import { saveAuthProfile } from '@/lib/supabase';
 import {
   Phone,
   ShieldCheck,
@@ -21,7 +23,6 @@ import {
   User,
   MapPin,
   Building,
-  Database,
 } from 'lucide-react-native';
 
 import { Button } from '@/components/common/Button';
@@ -35,9 +36,9 @@ import {
 
 export default function AuthScreen() {
   const router = useRouter();
+  const { signIn } = useSignIn();
+  const { signUp } = useSignUp();
   const {
-    signInWithEmail,
-    signUpWithEmail,
     loginWithMobile,
     continueAsGuest,
     fontScale,
@@ -55,7 +56,8 @@ export default function AuthScreen() {
   const [district, setDistrict] = useState('Ranchi');
   const [block, setBlock] = useState('Ranchi Sadar');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [emailConfirmationPending, setEmailConfirmationPending] = useState(false);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [isVerifyingEmail, setIsVerifyingEmail] = useState(false);
 
   const [phone, setPhone] = useState('98351 44210');
   const [otpSent, setOtpSent] = useState(false);
@@ -101,29 +103,148 @@ export default function AuthScreen() {
           return;
         }
 
-        const res = await signUpWithEmail(email, password, {
-          fullName: fullName.trim(),
-          phone: phoneForEmail.trim() ? `+91 ${phoneForEmail.trim()}` : '',
-          role: portalRole,
-          district: district.trim(),
-          block: block.trim(),
+        const nameParts = fullName.trim().split(' ');
+        const { error: signUpError } = await signUp.password({
+          emailAddress: email.trim(),
+          password,
+          firstName: nameParts[0],
+          lastName: nameParts.slice(1).join(' ') || undefined,
+          unsafeMetadata: {
+            role: portalRole,
+            district: district.trim(),
+            block: block.trim(),
+            phone: phoneForEmail.trim() ? `+91 ${phoneForEmail.trim()}` : '',
+          },
         });
 
-        if (res.success) {
-          if (res.requiresEmailConfirmation) {
-            setEmailConfirmationPending(true);
-          } else {
-            router.replace('/');
-          }
+        if (signUpError) {
+          showToast(signUpError.message || 'Registration failed', 'error');
+          setIsSubmitting(false);
+          return;
         }
+
+        const { error: sendError } = await signUp.verifications.sendEmailCode();
+        if (sendError) {
+          showToast(sendError.message || 'Failed to send verification code', 'error');
+          setIsSubmitting(false);
+          return;
+        }
+
+        setIsVerifyingEmail(true);
+        showToast('Verification code sent to your email!', 'success');
       } else {
-        const res = await signInWithEmail(email, password);
-        if (res.success) {
-          router.replace('/');
+        const { error: signInError } = await signIn.password({
+          emailAddress: email.trim(),
+          password,
+        });
+
+        console.log('CLERK SIGN_IN STATUS:', signIn?.status, 'SESSION_ID:', signIn?.createdSessionId, 'ERROR:', signInError);
+
+        if (signInError) {
+          showToast(signInError.message || 'Sign in failed', 'error');
+          setIsSubmitting(false);
+          return;
         }
+
+        if (signIn?.status === 'complete') {
+          const { error: finalizeError } = await signIn.finalize();
+          if (finalizeError) {
+            showToast(finalizeError.message || 'Sign in completion failed', 'error');
+            setIsSubmitting(false);
+            return;
+          }
+
+          showToast('Signed in successfully with Clerk!', 'success');
+          router.replace('/');
+          return;
+        }
+
+        if (signIn?.status === 'needs_client_trust' || signIn?.status === 'needs_second_factor') {
+          const emailFactor = (signIn as any)?.supportedSecondFactors?.find(
+            (f: any) => f.strategy === 'email_code'
+          );
+          if (emailFactor) {
+            await (signIn as any).mfa?.sendEmailCode?.();
+          }
+          setIsVerifyingEmail(true);
+          showToast('Verification code sent to your email for security.', 'info');
+          setIsSubmitting(false);
+          return;
+        }
+
+        showToast(`Sign in requires next step: ${signIn?.status}`, 'error');
+        setIsSubmitting(false);
       }
     } catch (err: any) {
       showToast(err?.message || 'Authentication error', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleVerifyClerkCode = async () => {
+    if (!verificationCode.trim()) {
+      showToast('Please enter the verification code.', 'error');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      if (!isSignUp) {
+        const { error: verifyError } = await (signIn as any)?.mfa?.verifyEmailCode?.({
+          code: verificationCode.trim(),
+        });
+        if (verifyError) {
+          showToast(verifyError.message || 'Invalid verification code', 'error');
+          setIsSubmitting(false);
+          return;
+        }
+
+        const { error: finalizeError } = await signIn.finalize();
+        if (finalizeError) {
+          showToast(finalizeError.message || 'Failed to finalize session', 'error');
+          setIsSubmitting(false);
+          return;
+        }
+
+        showToast('Device verified! Welcome to Samvad.', 'success');
+        router.replace('/');
+        return;
+      }
+
+      const { error: verifyError } = await signUp.verifications.verifyEmailCode({
+        code: verificationCode.trim(),
+      });
+      if (verifyError) {
+        showToast(verifyError.message || 'Invalid verification code', 'error');
+        setIsSubmitting(false);
+        return;
+      }
+
+      const { error: finalizeError } = await signUp.finalize();
+      if (finalizeError) {
+        showToast(finalizeError.message || 'Failed to finalize session', 'error');
+        setIsSubmitting(false);
+        return;
+      }
+
+      const resolvedUserId = signUp.createdUserId || email.trim();
+
+      await saveAuthProfile({
+        id: resolvedUserId,
+        email: email.trim(),
+        full_name: fullName.trim(),
+        phone: phoneForEmail.trim() ? `+91 ${phoneForEmail.trim()}` : '',
+        role: portalRole,
+        district: district.trim(),
+        block: block.trim(),
+      });
+
+      setUserRole(portalRole);
+      showToast('Account verified! Welcome to Samvad.', 'success');
+      router.replace('/');
+    } catch (err: any) {
+      showToast(err?.message || 'Verification error', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -179,9 +300,9 @@ export default function AuthScreen() {
 
           <View style={styles.supabaseLivePill}>
             <View style={styles.liveDot} />
-            <Database size={12} color="#16A34A" />
+            <ShieldCheck size={12} color="#2563EB" />
             <Text style={styles.supabaseLiveText}>
-              Supabase Auth Connected
+              Clerk Auth · Supabase Data Storage
             </Text>
           </View>
         </View>
@@ -266,181 +387,237 @@ export default function AuthScreen() {
 
         {authMode === 'email' && (
           <View style={[styles.card, Shadows.sm]}>
-            <View style={styles.subModeSwitch}>
-              <Pressable
-                onPress={() => {
-                  setIsSignUp(false);
-                  setEmailConfirmationPending(false);
-                }}
-                style={[styles.subModeBtn, !isSignUp && styles.subModeBtnActive]}>
-                <Text
-                  style={[
-                    styles.subModeText,
-                    !isSignUp && styles.subModeTextActive,
-                  ]}>
-                  Sign In
-                </Text>
-              </Pressable>
-
-              <Pressable
-                onPress={() => {
-                  setIsSignUp(true);
-                  setEmailConfirmationPending(false);
-                }}
-                style={[styles.subModeBtn, isSignUp && styles.subModeBtnActive]}>
-                <Text
-                  style={[
-                    styles.subModeText,
-                    isSignUp && styles.subModeTextActive,
-                  ]}>
-                  Register New
-                </Text>
-              </Pressable>
-            </View>
-
-            {emailConfirmationPending && (
-              <View style={styles.pendingBanner}>
-                <CheckCircle2 size={18} color="#16A34A" />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.pendingBannerTitle}>
-                    Account registered in Supabase!
-                  </Text>
-                  <Text style={styles.pendingBannerText}>
-                    Verification link sent to your email. You can sign in immediately once verified.
-                  </Text>
+            {isVerifyingEmail ? (
+              <View style={{ gap: 12 }}>
+                <View style={styles.pendingBanner}>
+                  <Mail size={18} color="#2563EB" />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.pendingBannerTitle}>
+                      Enter Clerk Verification Code
+                    </Text>
+                    <Text style={styles.pendingBannerText}>
+                      We sent a verification code to {email}. Enter it below to activate your account.
+                    </Text>
+                  </View>
                 </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.fieldLabel}>Verification Code *</Text>
+                  <View style={styles.inputWrapper}>
+                    <Lock size={16} color={SamadhanColors.textMuted} style={styles.inputIcon} />
+                    <TextInput
+                      accessibilityLabel="Verification Code"
+                      value={verificationCode}
+                      onChangeText={setVerificationCode}
+                      placeholder="Enter verification code"
+                      keyboardType="numeric"
+                      placeholderTextColor={SamadhanColors.textMuted}
+                      style={styles.textInputWithIcon}
+                      autoFocus
+                    />
+                  </View>
+                </View>
+
+                <Button
+                  title={isSubmitting ? 'Verifying with Clerk...' : 'Verify & Complete'}
+                  onPress={handleVerifyClerkCode}
+                  disabled={isSubmitting}
+                  variant="action"
+                  size="lg"
+                  icon={
+                    isSubmitting ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <CheckCircle2 size={18} color="#FFFFFF" />
+                    )
+                  }
+                  style={{ marginTop: Spacing.sm }}
+                />
+
+                <Button
+                  title="Resend Code"
+                  onPress={async () => {
+                    await signUp.verifications.sendEmailCode();
+                    showToast('Verification code resent to your email!', 'info');
+                  }}
+                  variant="outline"
+                  size="md"
+                />
+
+                <Button
+                  title="Back to Sign Up"
+                  onPress={() => setIsVerifyingEmail(false)}
+                  variant="ghost"
+                  size="sm"
+                />
               </View>
-            )}
-
-            {isSignUp && (
+            ) : (
               <>
+                <View style={styles.subModeSwitch}>
+                  <Pressable
+                    onPress={() => {
+                      setIsSignUp(false);
+                      setIsVerifyingEmail(false);
+                    }}
+                    style={[styles.subModeBtn, !isSignUp && styles.subModeBtnActive]}>
+                    <Text
+                      style={[
+                        styles.subModeText,
+                        !isSignUp && styles.subModeTextActive,
+                      ]}>
+                      Sign In
+                    </Text>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() => {
+                      setIsSignUp(true);
+                      setIsVerifyingEmail(false);
+                    }}
+                    style={[styles.subModeBtn, isSignUp && styles.subModeBtnActive]}>
+                    <Text
+                      style={[
+                        styles.subModeText,
+                        isSignUp && styles.subModeTextActive,
+                      ]}>
+                      Register New
+                    </Text>
+                  </Pressable>
+                </View>
+
+                {isSignUp && (
+                  <>
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.fieldLabel}>Full Name *</Text>
+                      <View style={styles.inputWrapper}>
+                        <User size={16} color={SamadhanColors.textMuted} style={styles.inputIcon} />
+                        <TextInput
+                          accessibilityLabel="Full Name"
+                          value={fullName}
+                          onChangeText={setFullName}
+                          placeholder={
+                            portalRole === 'citizen'
+                              ? 'e.g. Ramesh Kumar'
+                              : portalRole === 'university'
+                              ? 'e.g. Prof. Rajesh Sharma'
+                              : portalRole === 'industry'
+                              ? 'e.g. Alok Verma'
+                              : 'e.g. District Officer'
+                          }
+                          placeholderTextColor={SamadhanColors.textMuted}
+                          style={styles.textInputWithIcon}
+                        />
+                      </View>
+                    </View>
+
+                    <View style={styles.rowInputs}>
+                      <View style={[styles.inputGroup, { flex: 1 }]}>
+                        <Text style={styles.fieldLabel}>District</Text>
+                        <View style={styles.inputWrapper}>
+                          <MapPin size={16} color={SamadhanColors.textMuted} style={styles.inputIcon} />
+                          <TextInput
+                            accessibilityLabel="District"
+                            value={district}
+                            onChangeText={setDistrict}
+                            placeholder="Ranchi"
+                            placeholderTextColor={SamadhanColors.textMuted}
+                            style={styles.textInputWithIcon}
+                          />
+                        </View>
+                      </View>
+
+                      <View style={[styles.inputGroup, { flex: 1 }]}>
+                        <Text style={styles.fieldLabel}>Block</Text>
+                        <View style={styles.inputWrapper}>
+                          <Building size={16} color={SamadhanColors.textMuted} style={styles.inputIcon} />
+                          <TextInput
+                            accessibilityLabel="Block"
+                            value={block}
+                            onChangeText={setBlock}
+                            placeholder="Ranchi Sadar"
+                            placeholderTextColor={SamadhanColors.textMuted}
+                            style={styles.textInputWithIcon}
+                          />
+                        </View>
+                      </View>
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.fieldLabel}>Mobile Phone (Optional)</Text>
+                      <View style={styles.inputWrapper}>
+                        <Phone size={16} color={SamadhanColors.textMuted} style={styles.inputIcon} />
+                        <TextInput
+                          accessibilityLabel="Phone Number"
+                          value={phoneForEmail}
+                          onChangeText={setPhoneForEmail}
+                          keyboardType="phone-pad"
+                          placeholder="98765 43210"
+                          placeholderTextColor={SamadhanColors.textMuted}
+                          style={styles.textInputWithIcon}
+                        />
+                      </View>
+                    </View>
+                  </>
+                )}
+
                 <View style={styles.inputGroup}>
-                  <Text style={styles.fieldLabel}>Full Name *</Text>
+                  <Text style={styles.fieldLabel}>Email Address *</Text>
                   <View style={styles.inputWrapper}>
-                    <User size={16} color={SamadhanColors.textMuted} style={styles.inputIcon} />
+                    <Mail size={16} color={SamadhanColors.textMuted} style={styles.inputIcon} />
                     <TextInput
-                      accessibilityLabel="Full Name"
-                      value={fullName}
-                      onChangeText={setFullName}
-                      placeholder={
-                        portalRole === 'citizen'
-                          ? 'e.g. Ramesh Kumar'
-                          : portalRole === 'university'
-                          ? 'e.g. Prof. Rajesh Sharma'
-                          : portalRole === 'industry'
-                          ? 'e.g. Alok Verma'
-                          : 'e.g. District Officer'
-                      }
+                      accessibilityLabel="Email Address"
+                      value={email}
+                      onChangeText={setEmail}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      placeholder="your.email@example.com"
                       placeholderTextColor={SamadhanColors.textMuted}
                       style={styles.textInputWithIcon}
                     />
                   </View>
                 </View>
 
-                <View style={styles.rowInputs}>
-                  <View style={[styles.inputGroup, { flex: 1 }]}>
-                    <Text style={styles.fieldLabel}>District</Text>
-                    <View style={styles.inputWrapper}>
-                      <MapPin size={16} color={SamadhanColors.textMuted} style={styles.inputIcon} />
-                      <TextInput
-                        accessibilityLabel="District"
-                        value={district}
-                        onChangeText={setDistrict}
-                        placeholder="Ranchi"
-                        placeholderTextColor={SamadhanColors.textMuted}
-                        style={styles.textInputWithIcon}
-                      />
-                    </View>
-                  </View>
-
-                  <View style={[styles.inputGroup, { flex: 1 }]}>
-                    <Text style={styles.fieldLabel}>Block</Text>
-                    <View style={styles.inputWrapper}>
-                      <Building size={16} color={SamadhanColors.textMuted} style={styles.inputIcon} />
-                      <TextInput
-                        accessibilityLabel="Block"
-                        value={block}
-                        onChangeText={setBlock}
-                        placeholder="Ranchi Sadar"
-                        placeholderTextColor={SamadhanColors.textMuted}
-                        style={styles.textInputWithIcon}
-                      />
-                    </View>
-                  </View>
-                </View>
-
                 <View style={styles.inputGroup}>
-                  <Text style={styles.fieldLabel}>Mobile Phone (Optional)</Text>
+                  <Text style={styles.fieldLabel}>Password *</Text>
                   <View style={styles.inputWrapper}>
-                    <Phone size={16} color={SamadhanColors.textMuted} style={styles.inputIcon} />
+                    <Lock size={16} color={SamadhanColors.textMuted} style={styles.inputIcon} />
                     <TextInput
-                      accessibilityLabel="Phone Number"
-                      value={phoneForEmail}
-                      onChangeText={setPhoneForEmail}
-                      keyboardType="phone-pad"
-                      placeholder="98765 43210"
+                      accessibilityLabel="Password"
+                      value={password}
+                      onChangeText={setPassword}
+                      secureTextEntry
+                      placeholder="At least 6 characters"
                       placeholderTextColor={SamadhanColors.textMuted}
                       style={styles.textInputWithIcon}
                     />
                   </View>
                 </View>
+
+                <Button
+                  title={
+                    isSubmitting
+                      ? 'Authenticating with Clerk...'
+                      : isSignUp
+                      ? 'Create Account (Clerk)'
+                      : 'Sign In with Clerk'
+                  }
+                  onPress={handleEmailAuth}
+                  disabled={isSubmitting}
+                  variant="action"
+                  size="lg"
+                  icon={
+                    isSubmitting ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <ArrowRight size={18} color="#FFFFFF" />
+                    )
+                  }
+                  style={{ marginTop: Spacing.md }}
+                />
+
+                <View nativeID="clerk-captcha" />
               </>
             )}
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.fieldLabel}>Email Address *</Text>
-              <View style={styles.inputWrapper}>
-                <Mail size={16} color={SamadhanColors.textMuted} style={styles.inputIcon} />
-                <TextInput
-                  accessibilityLabel="Email Address"
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  placeholder="your.email@example.com"
-                  placeholderTextColor={SamadhanColors.textMuted}
-                  style={styles.textInputWithIcon}
-                />
-              </View>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.fieldLabel}>Password *</Text>
-              <View style={styles.inputWrapper}>
-                <Lock size={16} color={SamadhanColors.textMuted} style={styles.inputIcon} />
-                <TextInput
-                  accessibilityLabel="Password"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry
-                  placeholder="At least 6 characters"
-                  placeholderTextColor={SamadhanColors.textMuted}
-                  style={styles.textInputWithIcon}
-                />
-              </View>
-            </View>
-
-            <Button
-              title={
-                isSubmitting
-                  ? 'Connecting to Supabase...'
-                  : isSignUp
-                  ? 'Create Account'
-                  : 'Sign In'
-              }
-              onPress={handleEmailAuth}
-              disabled={isSubmitting}
-              variant="action"
-              size="lg"
-              icon={
-                isSubmitting ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <ArrowRight size={18} color="#FFFFFF" />
-                )
-              }
-              style={{ marginTop: Spacing.md }}
-            />
           </View>
         )}
 

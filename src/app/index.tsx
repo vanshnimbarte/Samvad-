@@ -1,7 +1,17 @@
-import React from 'react';
-import { ScrollView, View, Text, StyleSheet, Pressable } from 'react-native';
+import React, { useState } from 'react';
+import {
+  ScrollView,
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  TextInput,
+  ActivityIndicator,
+  RefreshControl,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useAuth, useSignUp } from '@clerk/expo';
 import { toHref } from '@/lib/routes';
 import {
   PlusCircle,
@@ -14,6 +24,7 @@ import {
   MapPinned,
   Bell,
   Cpu,
+  ShieldCheck,
 } from 'lucide-react-native';
 
 import { Header } from '@/components/common/Header';
@@ -50,18 +61,36 @@ const ROLE_COPY: Record<UserRole, { badge: string; title: string; desc: string }
   },
 };
 
-export default function CitizenHomeScreen() {
+function CitizenHomeScreenContent() {
   const router = useRouter();
-  const { t, language, fontScale, userRole, challenges, user } = useApp();
+  const { fontScale, userRole, challenges, user, refreshData } = useApp();
+  const [refreshing, setRefreshing] = useState(false);
   const copy = ROLE_COPY[userRole];
   const featured = challenges.slice(0, 3);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await refreshData();
+    setRefreshing(false);
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <Header />
       <OfflineBanner />
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[SamadhanColors.primary]}
+            tintColor={SamadhanColors.primary}
+          />
+        }>
         <View style={[styles.heroCard, Shadows.md]}>
           <View style={styles.heroTopRow}>
             <View style={styles.heroBadge}>
@@ -184,6 +213,243 @@ export default function CitizenHomeScreen() {
   );
 }
 
+export default function MainScreen() {
+  const { isLoaded, isSignedIn } = useAuth();
+  const { signUp } = useSignUp();
+  const router = useRouter();
+  const { continueAsGuest, user, showToast } = useApp();
+
+  const [emailAddress, setEmailAddress] = useState('');
+  const [password, setPassword] = useState('');
+  const [code, setCode] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [guestBypass, setGuestBypass] = useState(false);
+
+  const handleSignUp = async () => {
+    if (!emailAddress.trim() || !emailAddress.includes('@')) {
+      const err = 'Please enter a valid email address.';
+      setErrorMessage(err);
+      showToast(err, 'error');
+      return;
+    }
+    if (!password || password.length < 6) {
+      const err = 'Password must be at least 6 characters.';
+      setErrorMessage(err);
+      showToast(err, 'error');
+      return;
+    }
+
+    setErrorMessage('');
+    setIsSubmitting(true);
+    try {
+      const { error } = await signUp.password({ emailAddress: emailAddress.trim(), password });
+      if (error) {
+        const msg = error.message || 'Sign up failed';
+        setErrorMessage(msg);
+        showToast(msg, 'error');
+        setIsSubmitting(false);
+        return;
+      }
+
+      const { error: sendError } = await signUp.verifications.sendEmailCode();
+      if (sendError) {
+        const msg = sendError.message || 'Failed to send verification code';
+        setErrorMessage(msg);
+        showToast(msg, 'error');
+        setIsSubmitting(false);
+        return;
+      }
+
+      setIsVerifying(true);
+      showToast('Verification code sent to your email!', 'success');
+    } catch (err: any) {
+      const msg = err?.message || 'Failed to sign up';
+      setErrorMessage(msg);
+      showToast(msg, 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleVerify = async () => {
+    if (!code.trim()) {
+      setErrorMessage('Please enter the verification code.');
+      return;
+    }
+
+    setErrorMessage('');
+    setIsSubmitting(true);
+    try {
+      const { error } = await signUp.verifications.verifyEmailCode({ code: code.trim() });
+      if (error) {
+        const msg = error.message || 'Verification failed';
+        setErrorMessage(msg);
+        showToast(msg, 'error');
+        setIsSubmitting(false);
+        return;
+      }
+
+      const { error: finalizeError } = await signUp.finalize();
+      if (finalizeError) {
+        const msg = finalizeError.message || 'Failed to finalize session';
+        setErrorMessage(msg);
+        showToast(msg, 'error');
+        setIsSubmitting(false);
+        return;
+      }
+
+      showToast('Welcome to Samvad! Signed in successfully.', 'success');
+    } catch (err: any) {
+      const msg = err?.message || 'Verification error';
+      setErrorMessage(msg);
+      showToast(msg, 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!isLoaded) {
+    return (
+      <View style={authStyles.centerContainer}>
+        <ActivityIndicator size="large" color={SamadhanColors.primary} />
+      </View>
+    );
+  }
+
+  // If user is authenticated via Clerk or has elected to explore as guest
+  if (isSignedIn || guestBypass || (user && !user.isGuest && user.name !== 'Guest Citizen')) {
+    return <CitizenHomeScreenContent />;
+  }
+
+  // Verification step for email code
+  if (isVerifying) {
+    return (
+      <SafeAreaView style={authStyles.safeArea}>
+        <View style={authStyles.container}>
+          <View style={authStyles.headerBlock}>
+            <View style={authStyles.brandBadge}>
+              <Text style={authStyles.brandBadgeText}>SJ</Text>
+            </View>
+            <Text style={authStyles.title}>Verify your email</Text>
+            <Text style={authStyles.subtitle}>
+              We sent a verification code to {emailAddress}. Enter it below to activate your account.
+            </Text>
+          </View>
+
+          {errorMessage ? <Text style={authStyles.errorText}>{errorMessage}</Text> : null}
+
+          <TextInput
+            style={authStyles.input}
+            value={code}
+            placeholder="Enter your verification code"
+            placeholderTextColor={SamadhanColors.textMuted}
+            onChangeText={setCode}
+            keyboardType="numeric"
+            autoFocus
+          />
+
+          <Button
+            title={isSubmitting ? 'Verifying...' : 'Verify'}
+            onPress={handleVerify}
+            disabled={isSubmitting}
+            variant="action"
+            size="lg"
+          />
+
+          <Pressable onPress={() => setIsVerifying(false)} style={authStyles.backBtn}>
+            <Text style={authStyles.backBtnText}>Back to Sign Up</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Sign up screen
+  return (
+    <SafeAreaView style={authStyles.safeArea}>
+      <ScrollView contentContainerStyle={authStyles.scrollContainer} keyboardShouldPersistTaps="handled">
+        <View style={authStyles.container}>
+          <View style={authStyles.headerBlock}>
+            <View style={authStyles.brandBadge}>
+              <Text style={authStyles.brandBadgeText}>SJ</Text>
+            </View>
+            <Text style={authStyles.title}>Samvad Jharkhand</Text>
+            <Text style={authStyles.subtitle}>
+              Citizen-to-campus societal innovation portal. Authenticate with Clerk to track challenges and access universities.
+            </Text>
+
+            <View style={authStyles.clerkPill}>
+              <ShieldCheck size={13} color="#2563EB" />
+              <Text style={authStyles.clerkPillText}>Clerk Authentication · Supabase Data</Text>
+            </View>
+          </View>
+
+          {errorMessage ? <Text style={authStyles.errorText}>{errorMessage}</Text> : null}
+
+          <View style={authStyles.formBlock}>
+            <Text style={authStyles.fieldLabel}>Email Address</Text>
+            <TextInput
+              style={authStyles.input}
+              autoCapitalize="none"
+              value={emailAddress}
+              placeholder="Enter email"
+              placeholderTextColor={SamadhanColors.textMuted}
+              onChangeText={setEmailAddress}
+              keyboardType="email-address"
+            />
+
+            <Text style={authStyles.fieldLabel}>Password</Text>
+            <TextInput
+              style={authStyles.input}
+              value={password}
+              placeholder="Enter password (min 6 chars)"
+              placeholderTextColor={SamadhanColors.textMuted}
+              secureTextEntry={true}
+              onChangeText={setPassword}
+            />
+
+            <Button
+              title={isSubmitting ? 'Creating account...' : 'Sign up'}
+              onPress={handleSignUp}
+              disabled={isSubmitting}
+              variant="action"
+              size="lg"
+            />
+
+            <View style={authStyles.dividerRow}>
+              <View style={authStyles.dividerLine} />
+              <Text style={authStyles.dividerText}>or</Text>
+              <View style={authStyles.dividerLine} />
+            </View>
+
+            <Button
+              title="Already have an account? Sign in"
+              onPress={() => router.push(toHref('/auth'))}
+              variant="outline"
+              size="md"
+            />
+
+            <Button
+              title="Continue as Guest"
+              onPress={() => {
+                continueAsGuest();
+                setGuestBypass(true);
+              }}
+              variant="ghost"
+              size="md"
+            />
+          </View>
+
+          {/* Required for sign-up flows on Expo web if your application uses legacy bot sign-up protection. */}
+          <View nativeID="clerk-captcha" />
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
 function QuickTile({
   icon,
   bg,
@@ -202,6 +468,133 @@ function QuickTile({
     </Pressable>
   );
 }
+
+const authStyles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: SamadhanColors.background,
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    padding: Spacing.xl,
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: SamadhanColors.background,
+  },
+  container: {
+    width: '100%',
+    maxWidth: 440,
+    alignSelf: 'center',
+    backgroundColor: SamadhanColors.surface,
+    padding: Spacing.xl,
+    borderRadius: Radius.xl,
+    borderWidth: 1,
+    borderColor: SamadhanColors.border,
+    gap: 14,
+  },
+  headerBlock: {
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+  },
+  brandBadge: {
+    width: 48,
+    height: 48,
+    borderRadius: Radius.md,
+    backgroundColor: SamadhanColors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+  },
+  brandBadgeText: {
+    color: '#FFFFFF',
+    fontWeight: '900',
+    fontSize: 20,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: SamadhanColors.textPrimary,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 13,
+    color: SamadhanColors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 18,
+    paddingHorizontal: 8,
+  },
+  clerkPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#EFF6FF',
+    borderColor: '#BFDBFE',
+    borderWidth: 1,
+    borderRadius: Radius.full,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginTop: 10,
+  },
+  clerkPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#2563EB',
+  },
+  formBlock: {
+    gap: 10,
+  },
+  fieldLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: SamadhanColors.textPrimary,
+    marginBottom: -4,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: SamadhanColors.border,
+    borderRadius: Radius.md,
+    padding: 12,
+    fontSize: 15,
+    backgroundColor: '#F8FAFC',
+    color: SamadhanColors.textPrimary,
+  },
+  errorText: {
+    color: '#DC2626',
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 4,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: SamadhanColors.border,
+  },
+  dividerText: {
+    paddingHorizontal: 12,
+    fontSize: 12,
+    color: SamadhanColors.textMuted,
+    fontWeight: '600',
+  },
+  backBtn: {
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  backBtnText: {
+    fontSize: 13,
+    color: SamadhanColors.primary,
+    fontWeight: '700',
+  },
+});
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: SamadhanColors.background },

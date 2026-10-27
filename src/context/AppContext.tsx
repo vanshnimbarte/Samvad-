@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { Session, User } from '@supabase/supabase-js';
+import { useUser, useClerk } from '@clerk/expo';
 import {
   supabase,
+  clerkIdToUUID,
   fetchChallengesFromSupabase,
   insertChallengeToSupabase,
   fetchReportsFromSupabase,
@@ -14,6 +15,8 @@ import {
   saveLocalUserProfile,
   getLocalUserProfile,
   clearLocalUserProfile,
+  saveAuthProfile,
+  fetchUserSupportedProblemIds,
 } from '@/lib/supabase';
 import {
   loadSavedDrafts,
@@ -108,7 +111,7 @@ interface AppContextType {
 
 
   user: UserProfile;
-  session: Session | null;
+  session: { user: { id: string; email?: string } } | null;
   isLoadingAuth: boolean;
   updateUserProfile: (profile: Partial<UserProfile>) => Promise<void>;
   loginWithMobile: (
@@ -189,6 +192,7 @@ interface AppContextType {
   toast: ToastState;
   showToast: (message: string, type?: 'success' | 'info' | 'error') => void;
   hideToast: () => void;
+  refreshData: () => Promise<void>;
 }
 
 const ROLE_PROFILES: Record<UserRole, UserProfile> = {
@@ -258,157 +262,184 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [lastSyncedTime, setLastSyncedTime] = useState<string>('Just now');
 
 
+  const { isLoaded: isClerkLoaded, isSignedIn: isClerkSignedIn, user: clerkUser } = useUser();
+  const { signOut: clerkSignOut } = useClerk();
+
   const [user, setUser] = useState<UserProfile>(DEFAULT_USER);
   const [userRole, setUserRoleState] = useState<UserRole>('citizen');
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<{ user: { id: string; email?: string } } | null>(null);
   const [isLoadingAuth, setIsLoadingAuth] = useState<boolean>(true);
 
-  const syncUserFromSupabase = useCallback(async (sbUser: User | null) => {
-    if (!sbUser) return;
+  const syncUserFromSupabase = useCallback(
+    async (clerkId: string, email: string, name: string) => {
+      try {
+        const uuid = clerkIdToUUID(clerkId);
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', uuid)
+          .maybeSingle();
 
-    try {
-      const meta = sbUser.user_metadata || {};
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', sbUser.id)
-        .maybeSingle();
+        const metaRole = (clerkUser?.unsafeMetadata?.role as UserRole) || 'citizen';
+        const role: UserRole = (profileData?.role || metaRole) as UserRole;
+        const userFullName = profileData?.full_name || name || (email ? email.split('@')[0] : 'Citizen');
+        const phone = profileData?.phone || '';
+        const district =
+          profileData?.district || (clerkUser?.unsafeMetadata?.district as string) || 'Ranchi';
+        const block =
+          profileData?.block || (clerkUser?.unsafeMetadata?.block as string) || 'Ranchi Sadar';
+        const communityRole =
+          profileData?.community_role ||
+          (role === 'citizen'
+            ? 'Citizen Member'
+            : role === 'university'
+            ? 'Faculty Lead'
+            : role === 'industry'
+            ? 'CSR Lead'
+            : 'District Nodal Officer');
 
-      const role: UserRole = (profileData?.role || meta.role || 'citizen') as UserRole;
-      const name =
-        profileData?.full_name ||
-        meta.full_name ||
-        meta.name ||
-        (sbUser.email ? sbUser.email.split('@')[0] : 'Citizen');
-      const phone = profileData?.phone || meta.phone || sbUser.phone || '';
-      const district = profileData?.district || meta.district || 'Ranchi';
-      const block = profileData?.block || meta.block || 'Ranchi Sadar';
-      const communityRole =
-        profileData?.community_role ||
-        meta.community_role ||
-        (role === 'citizen'
-          ? 'Citizen Member'
-          : role === 'university'
-          ? 'Faculty Lead'
-          : role === 'industry'
-          ? 'CSR Lead'
-          : 'District Nodal Officer');
+        setUserRoleState(role);
+        const updatedProfile: UserProfile = {
+          name: userFullName,
+          phone,
+          email,
+          communityRole,
+          district,
+          block,
+          isGuest: false,
+        };
+        setUser(updatedProfile);
+        saveLocalUserProfile(updatedProfile, role);
 
-      setUserRoleState(role);
-      setUser({
-        name,
-        phone,
-        email: sbUser.email || '',
-        communityRole,
-        district,
-        block,
-        isGuest: false,
-      });
-
-
-      if (!profileData) {
-        try {
-          await supabase.from('profiles').upsert({
-            id: sbUser.id,
-            email: sbUser.email,
-            full_name: name,
+        if (!profileData) {
+          await saveAuthProfile({
+            id: clerkId,
+            email,
+            full_name: userFullName,
             phone,
             role,
             district,
             block,
             community_role: communityRole,
           });
-        } catch (_) {}
+        }
+      } catch (e) {
+        console.warn('Error syncing profile from Supabase:', e);
       }
-    } catch (e) {
-      console.warn('Error syncing profile from Supabase:', e);
-      const meta = sbUser.user_metadata || {};
-      const role: UserRole = (meta.role || 'citizen') as UserRole;
-      setUserRoleState(role);
-      setUser({
-        name: meta.full_name || meta.name || (sbUser.email ? sbUser.email.split('@')[0] : 'Citizen'),
-        phone: meta.phone || sbUser.phone || '',
-        email: sbUser.email || '',
-        communityRole: meta.community_role || 'Citizen Member',
-        district: meta.district || 'Ranchi',
-        block: meta.block || 'Ranchi Sadar',
-        isGuest: false,
-      });
-    }
-  }, []);
+    },
+    [clerkUser]
+  );
 
   useEffect(() => {
     let mounted = true;
 
-
-    supabase.auth
-      .getSession()
-      .then(async ({ data: { session: existingSession } }) => {
-        if (!mounted) return;
-        setSession(existingSession);
-        if (existingSession?.user) {
-          await syncUserFromSupabase(existingSession.user);
-        } else {
-
-          const localStored = await getLocalUserProfile();
-          if (localStored?.profile && mounted) {
+    if (isClerkLoaded) {
+      if (isClerkSignedIn && clerkUser) {
+        const clerkId = clerkUser.id;
+        const email = clerkUser.primaryEmailAddress?.emailAddress || '';
+        const name =
+          clerkUser.fullName ||
+          clerkUser.firstName ||
+          (email ? email.split('@')[0] : 'Citizen');
+        setSession({ user: { id: clerkIdToUUID(clerkId), email } });
+        syncUserFromSupabase(clerkId, email, name);
+      } else {
+        getLocalUserProfile().then((localStored) => {
+          if (!mounted) return;
+          if (localStored?.profile) {
             setUser(localStored.profile);
             setUserRoleState((localStored.role || 'citizen') as UserRole);
+            if (localStored.profile.phone) {
+              setSession({ user: { id: clerkIdToUUID(localStored.profile.phone), email: localStored.profile.email } });
+            }
+          } else {
+            setUser({
+              name: 'Guest Citizen',
+              phone: '',
+              email: '',
+              communityRole: 'Guest',
+              district: 'Ranchi',
+              block: 'Ranchi Sadar',
+              isGuest: true,
+            });
+            setUserRoleState('citizen');
+            setSession(null);
           }
-        }
-        setIsLoadingAuth(false);
-      })
-      .catch(async (err) => {
-        console.warn('Supabase getSession error:', err);
-        const localStored = await getLocalUserProfile();
-        if (localStored?.profile && mounted) {
-          setUser(localStored.profile);
-          setUserRoleState((localStored.role || 'citizen') as UserRole);
-        }
-        if (mounted) setIsLoadingAuth(false);
-      });
-
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
-      if (!mounted) return;
-      setSession(newSession);
-      if (newSession?.user) {
-        await syncUserFromSupabase(newSession.user);
-      } else if (_event === 'SIGNED_OUT') {
-        setUser({
-          name: 'Guest Citizen',
-          phone: '',
-          email: '',
-          communityRole: 'Guest',
-          district: 'Ranchi',
-          block: 'Ranchi Sadar',
-          isGuest: true,
         });
-        setUserRoleState('citizen');
       }
-    });
+      setIsLoadingAuth(false);
+    }
 
+    return () => {
+      mounted = false;
+    };
+  }, [isClerkLoaded, isClerkSignedIn, clerkUser, syncUserFromSupabase]);
 
-    fetchChallengesFromSupabase().then((sbChallenges) => {
+  const [challenges, setChallenges] = useState<Challenge[]>(() => enrichChallenges(CHALLENGES_DATA));
+  const [reports, setReports] = useState<CivicReport[]>(INITIAL_REPORTS);
+  const [drafts, setDrafts] = useState<DraftReport[]>([
+    {
+      id: 'DRAFT-JH-01',
+      title: 'Low voltage transformer tripping daily in Angara',
+      description: 'The local 63kVA transformer drops voltage to 110V every evening, preventing irrigation motors from running.',
+      categoryId: 'infrastructure',
+      urgency: 'medium',
+      district: 'Ranchi',
+      block: 'Angara',
+      villageOrWard: 'Hesal',
+      address: 'Near Kali Temple, Hesal Village',
+      affectedCount: 150,
+      affectedGroups: ['Farmers', 'Entire community'],
+      recurring: true,
+      isAnonymous: false,
+      contactMethod: 'Phone',
+      mediaCount: 1,
+      savedAt: '13 Sep 2026, 06:20 PM',
+    },
+  ]);
+  const [supportedProblemIds, setSupportedProblemIds] = useState<Record<string, boolean>>({
+    'SC-JH-84920': true,
+    'SC-JH-84924': true,
+  });
+
+  useEffect(() => {
+    let mounted = true;
+    const currentUserId = session?.user?.id;
+
+    fetchChallengesFromSupabase(currentUserId).then((sbChallenges) => {
       if (!mounted || !sbChallenges || sbChallenges.length === 0) return;
       setChallenges((prev) => {
-        const ids = new Set(sbChallenges.map((c) => c.id));
+        const prevUserChallengeIds = new Set(prev.filter((p) => p.isUserChallenge).map((p) => p.id));
+        const mergedSbChallenges = sbChallenges.map((c) => ({
+          ...c,
+          isUserChallenge: c.isUserChallenge || prevUserChallengeIds.has(c.id),
+        }));
+        const ids = new Set(mergedSbChallenges.map((c) => c.id));
         const filteredPrev = prev.filter((p) => !ids.has(p.id));
-        return [...sbChallenges, ...filteredPrev];
+        return [...mergedSbChallenges, ...filteredPrev];
       });
     });
 
-    fetchReportsFromSupabase().then((sbReports) => {
+    fetchReportsFromSupabase(currentUserId).then((sbReports) => {
       if (!mounted || !sbReports || sbReports.length === 0) return;
       setReports((prev) => {
-        const ids = new Set(sbReports.map((r) => r.id));
+        const prevUserReportIds = new Set(prev.filter((p) => p.isUserReport).map((p) => p.id));
+        const mergedSbReports = sbReports.map((r) => ({
+          ...r,
+          isUserReport: r.isUserReport || prevUserReportIds.has(r.id),
+        }));
+        const ids = new Set(mergedSbReports.map((r) => r.id));
         const filteredPrev = prev.filter((p) => !ids.has(p.id));
-        return [...sbReports, ...filteredPrev];
+        return [...mergedSbReports, ...filteredPrev];
       });
     });
 
+    if (currentUserId) {
+      fetchUserSupportedProblemIds(currentUserId).then((sbSupports) => {
+        if (!mounted || !sbSupports) return;
+        setSupportedProblemIds((prev) => ({ ...prev, ...sbSupports }));
+      });
+    }
 
     loadSavedDrafts().then((savedDrafts) => {
       if (!mounted || !savedDrafts || savedDrafts.length === 0) return;
@@ -419,7 +450,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       });
     });
 
-
     loadSupportedProblems().then((savedSupports) => {
       if (!mounted || !savedSupports) return;
       setSupportedProblemIds((prev) => ({ ...prev, ...savedSupports }));
@@ -427,9 +457,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       mounted = false;
-      subscription.unsubscribe();
     };
-  }, [syncUserFromSupabase]);
+  }, [session?.user?.id]);
 
   const setUserRole = (role: UserRole) => {
     setUserRoleState(role);
@@ -466,37 +495,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } else if (user.phone) {
       targetQuery.eq('phone', user.phone).then();
     }
+
+    if (clerkUser) {
+      clerkUser.update({ unsafeMetadata: { role } }).catch(() => {});
+    }
   };
-  const [challenges, setChallenges] = useState<Challenge[]>(() => enrichChallenges(CHALLENGES_DATA));
-
-
-  const [reports, setReports] = useState<CivicReport[]>(INITIAL_REPORTS);
-  const [drafts, setDrafts] = useState<DraftReport[]>([
-    {
-      id: 'DRAFT-JH-01',
-      title: 'Low voltage transformer tripping daily in Angara',
-      description: 'The local 63kVA transformer drops voltage to 110V every evening, preventing irrigation motors from running.',
-      categoryId: 'infrastructure',
-      urgency: 'medium',
-      district: 'Ranchi',
-      block: 'Angara',
-      villageOrWard: 'Hesal',
-      address: 'Near Kali Temple, Hesal Village',
-      affectedCount: 150,
-      affectedGroups: ['Farmers', 'Entire community'],
-      recurring: true,
-      isAnonymous: false,
-      contactMethod: 'Phone',
-      mediaCount: 1,
-      savedAt: '13 Sep 2026, 06:20 PM',
-    },
-  ]);
-
-
-  const [supportedProblemIds, setSupportedProblemIds] = useState<Record<string, boolean>>({
-    'SC-JH-84920': true,
-    'SC-JH-84924': true,
-  });
 
 
   const [notifications, setNotifications] = useState<CivicNotification[]>(INITIAL_NOTIFICATIONS);
@@ -795,9 +798,53 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
 
     setDrafts([]);
+    persistDrafts([]);
     setNetworkStatus('online');
     setLastSyncedTime('Just now');
     showToast('All drafts synchronized successfully!', 'success');
+  };
+
+  const refreshData = async () => {
+    const currentUserId = session?.user?.id;
+    try {
+      const [sbChallenges, sbReports, sbSupports] = await Promise.all([
+        fetchChallengesFromSupabase(currentUserId),
+        fetchReportsFromSupabase(currentUserId),
+        currentUserId ? fetchUserSupportedProblemIds(currentUserId) : Promise.resolve(null),
+      ]);
+
+      if (sbChallenges && sbChallenges.length > 0) {
+        setChallenges((prev) => {
+          const prevUserChallengeIds = new Set(prev.filter((p) => p.isUserChallenge).map((p) => p.id));
+          const merged = sbChallenges.map((c) => ({
+            ...c,
+            isUserChallenge: c.isUserChallenge || prevUserChallengeIds.has(c.id),
+          }));
+          const ids = new Set(merged.map((c) => c.id));
+          const filteredPrev = prev.filter((p) => !ids.has(p.id));
+          return [...merged, ...filteredPrev];
+        });
+      }
+
+      if (sbReports && sbReports.length > 0) {
+        setReports((prev) => {
+          const prevUserReportIds = new Set(prev.filter((p) => p.isUserReport).map((p) => p.id));
+          const merged = sbReports.map((r) => ({
+            ...r,
+            isUserReport: r.isUserReport || prevUserReportIds.has(r.id),
+          }));
+          const ids = new Set(merged.map((r) => r.id));
+          const filteredPrev = prev.filter((p) => !ids.has(p.id));
+          return [...merged, ...filteredPrev];
+        });
+      }
+
+      if (sbSupports) {
+        setSupportedProblemIds((prev) => ({ ...prev, ...sbSupports }));
+      }
+    } catch (e) {
+      console.warn('refreshData failed:', e);
+    }
   };
 
   const getReportById = (id: string): CivicReport | undefined => {
@@ -1231,8 +1278,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (data?.session && data?.user) {
-        setSession(data.session);
-        await syncUserFromSupabase(data.user);
+        setSession({ user: { id: data.user.id, email: data.user.email } });
+        const displayName = data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'Citizen';
+        await syncUserFromSupabase(data.user.id, data.user.email || cleanEmail, displayName);
         showToast('Logged in successfully!', 'success');
         return { success: true };
       }
@@ -1310,24 +1358,46 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return { success: false, requiresEmailConfirmation: false, error: msg };
       }
 
-      const profileId = data?.user?.id || generateUUID();
-      try {
-        await supabase.from('profiles').upsert(
-          {
-            id: profileId,
-            email: cleanEmail,
-            full_name: cleanName,
-            phone: metadata.phone || '',
-            role,
-            district: metadata.district || 'Ranchi',
-            block: metadata.block || 'Ranchi Sadar',
-            community_role: communityRole,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'email' }
-        );
-      } catch (upsertErr) {
-        console.warn('Profile upsert to Supabase:', upsertErr);
+      if (data?.session) {
+        setSession(data.session);
+      }
+
+      let profileSaved = false;
+      if (data?.user?.id && data.session) {
+        const result = await saveAuthProfile({
+          id: data.user.id,
+          email: cleanEmail,
+          full_name: cleanName,
+          phone: metadata.phone || '',
+          role,
+          district: metadata.district || 'Ranchi',
+          block: metadata.block || 'Ranchi Sadar',
+          community_role: communityRole,
+        });
+        if (!result.saved) {
+          console.warn('Profile save to Supabase failed:', result.error);
+        }
+        const { data: savedRow } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', data.user.id)
+          .maybeSingle();
+        profileSaved = !!savedRow?.id;
+      }
+
+      if (data?.user) {
+        await syncUserFromSupabase(data.user.id, cleanEmail, cleanName);
+      } else {
+        setUserRoleState(role);
+        setUser({
+          name: cleanName,
+          phone: metadata.phone || '',
+          email: cleanEmail,
+          communityRole,
+          district: metadata.district || 'Ranchi',
+          block: metadata.block || 'Ranchi Sadar',
+          isGuest: false,
+        });
       }
 
       const userObj: UserProfile = {
@@ -1339,18 +1409,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         block: metadata.block || 'Ranchi Sadar',
         isGuest: false,
       };
-
-      setUser(userObj);
-      setUserRoleState(role);
       await saveLocalUserProfile(userObj, role);
 
       if (data?.session) {
-        setSession(data.session);
-        showToast('Account registered and saved to Supabase successfully!', 'success');
+        if (profileSaved) {
+          showToast('Account registered and saved to Supabase successfully!', 'success');
+        } else {
+          showToast(
+            'Account created, but the profile row could not be saved. Check profiles RLS for authenticated insert/update.',
+            'error'
+          );
+        }
         return { success: true, requiresEmailConfirmation: false };
       }
 
-      showToast('Account registered! Please check email or disable Confirm email in Supabase.', 'info');
+      showToast(
+        'Account registered. Confirm your email, then sign in — the profile is created by the Auth trigger.',
+        'info'
+      );
       return { success: true, requiresEmailConfirmation: true };
     } catch (e: any) {
       const msg = e?.message || 'Registration failed';
@@ -1395,9 +1471,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         .eq('phone', cleanPhone)
         .maybeSingle();
 
+      const profileId = existing?.id || clerkIdToUUID(cleanPhone);
+      setSession({ user: { id: profileId } });
+
       await supabase.from('profiles').upsert(
         {
-          id: existing?.id || generateUUID(),
+          id: profileId,
           phone: cleanPhone,
           full_name: cleanName,
           role: activeRole,
@@ -1406,7 +1485,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           community_role: cleanOrg,
           updated_at: new Date().toISOString(),
         },
-        { onConflict: 'phone' }
+        { onConflict: 'id' }
       );
     } catch (_) {}
 
@@ -1434,28 +1513,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
 
     try {
-      if (session?.user) {
-        await supabase.auth.updateUser({
-          data: {
-            full_name: profile.name,
-            phone: profile.phone,
-            district: profile.district,
-            block: profile.block,
-            community_role: profile.communityRole,
-            role: userRole,
-          },
-        });
+      if (clerkUser && profile.name) {
+        const parts = profile.name.trim().split(' ');
+        clerkUser
+          .update({
+            firstName: parts[0],
+            lastName: parts.slice(1).join(' ') || undefined,
+            unsafeMetadata: {
+              district: profile.district,
+              block: profile.block,
+              communityRole: profile.communityRole,
+              role: userRole,
+            },
+          })
+          .catch(() => {});
       }
 
-      const updatePayload = {
-        full_name: profile.name,
-        phone: profile.phone,
-        district: profile.district,
-        block: profile.block,
-        community_role: profile.communityRole,
-        role: userRole,
+      const updatePayload: Record<string, any> = {
         updated_at: new Date().toISOString(),
       };
+      if (profile.name !== undefined) updatePayload.full_name = profile.name;
+      if (profile.phone !== undefined) updatePayload.phone = profile.phone;
+      if (profile.district !== undefined) updatePayload.district = profile.district;
+      if (profile.block !== undefined) updatePayload.block = profile.block;
+      if (profile.communityRole !== undefined) updatePayload.community_role = profile.communityRole;
+      if (userRole !== undefined) updatePayload.role = userRole;
 
       if (session?.user?.id) {
         await supabase.from('profiles').update(updatePayload).eq('id', session.user.id);
@@ -1473,9 +1555,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
-      await supabase.auth.signOut();
+      await clerkSignOut();
     } catch (e) {
-      console.warn('Error signing out of Supabase:', e);
+      console.warn('Error signing out of Clerk:', e);
     }
     await clearLocalUserProfile();
     setSession(null);
@@ -1556,6 +1638,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         submitProposal,
         offerIndustrySupport,
         toggleMilestone,
+        refreshData,
         toast,
         showToast,
         hideToast,

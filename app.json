@@ -45,7 +45,8 @@
       "expo-sqlite",
       "expo-secure-store",
       "expo-font",
-      "expo-status-bar"
+      "expo-status-bar",
+      "@clerk/expo"
     ],
     "experiments": {
       "typedRoutes": true,

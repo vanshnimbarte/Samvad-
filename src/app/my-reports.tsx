@@ -7,6 +7,7 @@ import {
   TextInput,
   Pressable,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -47,6 +48,8 @@ import {
 export default function MyReportsScreen() {
   const router = useRouter();
   const {
+    user,
+    session,
     reports,
     drafts,
     deleteDraft,
@@ -55,6 +58,7 @@ export default function MyReportsScreen() {
     fontScale,
     networkStatus,
     t,
+    refreshData,
   } = useApp();
 
   // Active view: 'submitted' or 'drafts'
@@ -69,11 +73,23 @@ export default function MyReportsScreen() {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [showFilterDrawer, setShowFilterDrawer] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const onRefresh = async () => {
+    setIsRefreshing(true);
+    await refreshData();
+    setIsRefreshing(false);
+  };
 
   const isOffline = networkStatus === 'offline';
 
-  // Filter submitted reports (marked isUserReport or all active reports submitted in session)
-  const mySubmittedReports = reports.filter((r) => r.isUserReport);
+  // Filter submitted reports (marked isUserReport or matching user id / name)
+  const mySubmittedReports = reports.filter((r) => {
+    if (r.isUserReport) return true;
+    if (session?.user?.id && (r as any).userId === session.user.id) return true;
+    if (user?.name && r.submittedBy?.name === user.name && !r.submittedBy?.isAnonymous) return true;
+    return false;
+  });
 
   const filteredReports = mySubmittedReports.filter((r) => {
     const titleMatch =
@@ -262,7 +278,15 @@ export default function MyReportsScreen() {
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}>
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={onRefresh}
+              colors={[SamadhanColors.primary]}
+              tintColor={SamadhanColors.primary}
+            />
+          }>
           {/* TAB 1: SUBMITTED REPORTS */}
           {activeTab === 'submitted' && (
             <>

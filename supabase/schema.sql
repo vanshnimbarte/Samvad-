@@ -9,7 +9,7 @@
 -- 1. PROFILES TABLE (Strict RLS & Privacy Controls)
 -- ------------------------------------------------------------------------------
 create table if not exists public.profiles (
-  id uuid references auth.users on delete cascade primary key,
+  id uuid primary key,
   email text,
   full_name text,
   phone text,
@@ -25,6 +25,8 @@ create table if not exists public.profiles (
 
 alter table public.profiles enable row level security;
 
+grant select, insert, update on table public.profiles to anon, authenticated;
+
 alter table public.profiles drop constraint if exists profiles_id_fkey;
 
 drop policy if exists "Public profiles are viewable by everyone" on public.profiles;
@@ -32,6 +34,7 @@ drop policy if exists "Profiles are viewable by authenticated users" on public.p
 drop policy if exists "Users can insert their own profile" on public.profiles;
 drop policy if exists "Users can insert own profile" on public.profiles;
 drop policy if exists "Users can update own profile" on public.profiles;
+drop policy if exists "Profiles are viewable by everyone" on public.profiles;
 drop policy if exists "Allow all select on profiles" on public.profiles;
 drop policy if exists "Allow all insert on profiles" on public.profiles;
 drop policy if exists "Allow all update on profiles" on public.profiles;
@@ -50,7 +53,11 @@ create policy "Allow all update on profiles"
 
 -- Trigger to auto-create profile on Supabase Auth user creation
 create or replace function public.handle_new_user()
-returns trigger as $$
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
 begin
   insert into public.profiles (
     id,
@@ -79,11 +86,16 @@ begin
     full_name = coalesce(excluded.full_name, profiles.full_name),
     phone = coalesce(excluded.phone, profiles.phone),
     role = coalesce(excluded.role, profiles.role),
+    district = coalesce(excluded.district, profiles.district),
+    block = coalesce(excluded.block, profiles.block),
+    community_role = coalesce(excluded.community_role, profiles.community_role),
     updated_at = timezone('utc'::text, now());
 
   return new;
 end;
-$$ language plpgsql security definer;
+$$;
+
+revoke execute on function public.handle_new_user() from public, anon, authenticated;
 
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
@@ -110,7 +122,7 @@ on conflict (id) do nothing;
 -- ------------------------------------------------------------------------------
 create table if not exists public.challenges (
   id text primary key,
-  user_id uuid references auth.users(id) on delete set null,
+  user_id uuid,
   title text not null,
   domain text not null,
   domain_icon text,
@@ -146,38 +158,37 @@ create table if not exists public.challenges (
 
 alter table public.challenges enable row level security;
 
+alter table public.challenges drop constraint if exists challenges_user_id_fkey;
+grant select, insert, update on table public.challenges to anon, authenticated;
+
 drop policy if exists "Challenges are viewable by everyone" on public.challenges;
 drop policy if exists "Anyone can submit a challenge" on public.challenges;
 drop policy if exists "Users or admins can update challenges" on public.challenges;
+drop policy if exists "Public can view challenges" on public.challenges;
+drop policy if exists "Authenticated users can submit challenges" on public.challenges;
+drop policy if exists "Authorized roles can update challenges" on public.challenges;
 
 -- Public can view challenges to explore societal issues
 create policy "Public can view challenges"
   on public.challenges for select
   using (true);
 
--- Authenticated users can insert challenges
-create policy "Authenticated users can submit challenges"
+-- Anyone (Clerk authenticated or guest) can submit challenges to Supabase
+create policy "Anyone can submit challenges"
   on public.challenges for insert
-  with check (auth.role() = 'authenticated' and (user_id is null or auth.uid() = user_id));
+  with check (true);
 
--- Only the challenge author OR verified university/government profiles can update
-create policy "Authorized roles can update challenges"
+-- Anyone can update challenges to update milestones, upvotes, stages
+create policy "Anyone can update challenges"
   on public.challenges for update
-  using (
-    auth.uid() = user_id or
-    exists (
-      select 1 from public.profiles
-      where profiles.id = auth.uid()
-      and profiles.role in ('university', 'government')
-    )
-  );
+  using (true);
 
 -- ------------------------------------------------------------------------------
 -- 3. CIVIC REPORTS TABLE (Strict Auth Insertion & Department Updates)
 -- ------------------------------------------------------------------------------
 create table if not exists public.civic_reports (
   id text primary key,
-  user_id uuid references auth.users(id) on delete set null,
+  user_id uuid,
   title_en text not null,
   title_hi text,
   description_en text not null,
@@ -201,31 +212,30 @@ create table if not exists public.civic_reports (
 
 alter table public.civic_reports enable row level security;
 
+alter table public.civic_reports drop constraint if exists civic_reports_user_id_fkey;
+grant select, insert, update on table public.civic_reports to anon, authenticated;
+
 drop policy if exists "Reports are viewable by everyone" on public.civic_reports;
 drop policy if exists "Anyone can submit a report" on public.civic_reports;
 drop policy if exists "Reports can be updated" on public.civic_reports;
+drop policy if exists "Public can view reports" on public.civic_reports;
+drop policy if exists "Authenticated users can submit reports" on public.civic_reports;
+drop policy if exists "Authorized users can update reports" on public.civic_reports;
 
--- Public can view civic reports (names can be anonymous based on report payload)
+-- Public can view civic reports
 create policy "Public can view reports"
   on public.civic_reports for select
   using (true);
 
--- Authenticated users can submit reports
-create policy "Authenticated users can submit reports"
+-- Anyone can submit reports
+create policy "Anyone can submit reports"
   on public.civic_reports for insert
-  with check (auth.role() = 'authenticated' and (user_id is null or auth.uid() = user_id));
+  with check (true);
 
--- Author or government/coordination team can update
-create policy "Authorized users can update reports"
+-- Anyone can update reports
+create policy "Anyone can update reports"
   on public.civic_reports for update
-  using (
-    auth.uid() = user_id or
-    exists (
-      select 1 from public.profiles
-      where profiles.id = auth.uid()
-      and profiles.role in ('government')
-    )
-  );
+  using (true);
 
 -- ------------------------------------------------------------------------------
 -- 4. CHALLENGE COMMENTS TABLE
@@ -233,25 +243,28 @@ create policy "Authorized users can update reports"
 create table if not exists public.challenge_comments (
   id uuid default gen_random_uuid() primary key,
   challenge_id text references public.challenges(id) on delete cascade not null,
-  user_id uuid references auth.users(id) on delete set null,
+  user_id uuid,
   author_name text not null,
   author_role text not null,
   comment_text text not null,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
-alter table public.challenge_comments enable row level security;
+alter table public.challenge_comments drop constraint if exists challenge_comments_user_id_fkey;
+grant select, insert on table public.challenge_comments to anon, authenticated;
 
 drop policy if exists "Challenge comments are viewable by everyone" on public.challenge_comments;
 drop policy if exists "Anyone can post a comment" on public.challenge_comments;
+drop policy if exists "Public can view challenge comments" on public.challenge_comments;
+drop policy if exists "Authenticated users can post challenge comments" on public.challenge_comments;
 
 create policy "Public can view challenge comments"
   on public.challenge_comments for select
   using (true);
 
-create policy "Authenticated users can post challenge comments"
+create policy "Anyone can post challenge comments"
   on public.challenge_comments for insert
-  with check (auth.role() = 'authenticated' and auth.uid() = user_id);
+  with check (true);
 
 -- ------------------------------------------------------------------------------
 -- 5. REPORT COMMENTS TABLE
@@ -259,7 +272,7 @@ create policy "Authenticated users can post challenge comments"
 create table if not exists public.report_comments (
   id uuid default gen_random_uuid() primary key,
   report_id text references public.civic_reports(id) on delete cascade not null,
-  user_id uuid references auth.users(id) on delete set null,
+  user_id uuid,
   author_name text not null,
   author_role text not null,
   comment_text text not null,
@@ -267,17 +280,21 @@ create table if not exists public.report_comments (
 );
 
 alter table public.report_comments enable row level security;
+alter table public.report_comments drop constraint if exists report_comments_user_id_fkey;
+grant select, insert on table public.report_comments to anon, authenticated;
 
 drop policy if exists "Report comments are viewable by everyone" on public.report_comments;
 drop policy if exists "Anyone can comment on a report" on public.report_comments;
+drop policy if exists "Public can view report comments" on public.report_comments;
+drop policy if exists "Authenticated users can post report comments" on public.report_comments;
 
 create policy "Public can view report comments"
   on public.report_comments for select
   using (true);
 
-create policy "Authenticated users can post report comments"
+create policy "Anyone can post report comments"
   on public.report_comments for insert
-  with check (auth.role() = 'authenticated' and auth.uid() = user_id);
+  with check (true);
 
 -- ------------------------------------------------------------------------------
 -- 6. CHALLENGE UPVOTES TABLE
@@ -285,28 +302,32 @@ create policy "Authenticated users can post report comments"
 create table if not exists public.challenge_upvotes (
   id uuid default gen_random_uuid() primary key,
   challenge_id text references public.challenges(id) on delete cascade not null,
-  user_id uuid references auth.users(id) on delete cascade not null,
+  user_id uuid not null,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   unique (challenge_id, user_id)
 );
 
 alter table public.challenge_upvotes enable row level security;
+alter table public.challenge_upvotes drop constraint if exists challenge_upvotes_user_id_fkey;
+grant select, insert, delete on table public.challenge_upvotes to anon, authenticated;
 
 drop policy if exists "Upvotes viewable by everyone" on public.challenge_upvotes;
 drop policy if exists "Authenticated users can upvote" on public.challenge_upvotes;
 drop policy if exists "Users can remove their upvote" on public.challenge_upvotes;
+drop policy if exists "Public can view upvotes" on public.challenge_upvotes;
+drop policy if exists "Users can remove own upvote" on public.challenge_upvotes;
 
 create policy "Public can view upvotes"
   on public.challenge_upvotes for select
   using (true);
 
-create policy "Authenticated users can upvote"
+create policy "Anyone can upvote"
   on public.challenge_upvotes for insert
-  with check (auth.role() = 'authenticated' and auth.uid() = user_id);
+  with check (true);
 
-create policy "Users can remove own upvote"
+create policy "Anyone can remove upvote"
   on public.challenge_upvotes for delete
-  using (auth.uid() = user_id);
+  using (true);
 
 -- ------------------------------------------------------------------------------
 -- 7. REPORT SUPPORTS TABLE
@@ -314,35 +335,40 @@ create policy "Users can remove own upvote"
 create table if not exists public.report_supports (
   id uuid default gen_random_uuid() primary key,
   report_id text references public.civic_reports(id) on delete cascade not null,
-  user_id uuid references auth.users(id) on delete cascade not null,
+  user_id uuid not null,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   unique (report_id, user_id)
 );
 
 alter table public.report_supports enable row level security;
+alter table public.report_supports drop constraint if exists report_supports_user_id_fkey;
+grant select, insert, delete on table public.report_supports to anon, authenticated;
 
 drop policy if exists "Supports viewable by everyone" on public.report_supports;
 drop policy if exists "Users can support reports" on public.report_supports;
 drop policy if exists "Users can remove support" on public.report_supports;
+drop policy if exists "Public can view supports" on public.report_supports;
+drop policy if exists "Authenticated users can support reports" on public.report_supports;
+drop policy if exists "Users can remove own support" on public.report_supports;
 
 create policy "Public can view supports"
   on public.report_supports for select
   using (true);
 
-create policy "Authenticated users can support reports"
+create policy "Anyone can support reports"
   on public.report_supports for insert
-  with check (auth.role() = 'authenticated' and auth.uid() = user_id);
+  with check (true);
 
-create policy "Users can remove own support"
+create policy "Anyone can remove support"
   on public.report_supports for delete
-  using (auth.uid() = user_id);
+  using (true);
 
 -- ------------------------------------------------------------------------------
 -- 8. NOTIFICATIONS TABLE
 -- ------------------------------------------------------------------------------
 create table if not exists public.notifications (
   id uuid default gen_random_uuid() primary key,
-  user_id uuid references auth.users(id) on delete cascade not null,
+  user_id uuid not null,
   type text not null,
   title_en text not null,
   title_hi text,
@@ -355,17 +381,27 @@ create table if not exists public.notifications (
 );
 
 alter table public.notifications enable row level security;
+alter table public.notifications drop constraint if exists notifications_user_id_fkey;
+grant select, insert, update on table public.notifications to anon, authenticated;
 
 drop policy if exists "Users can see own notifications" on public.notifications;
 drop policy if exists "Users can update own notifications" on public.notifications;
+drop policy if exists "Users can view own notifications" on public.notifications;
+drop policy if exists "Anyone can view notifications" on public.notifications;
+drop policy if exists "Anyone can update notifications" on public.notifications;
+drop policy if exists "Anyone can insert notifications" on public.notifications;
 
-create policy "Users can view own notifications"
+create policy "Anyone can view notifications"
   on public.notifications for select
-  using (auth.uid() = user_id);
+  using (true);
 
-create policy "Users can update own notifications"
+create policy "Anyone can insert notifications"
+  on public.notifications for insert
+  with check (true);
+
+create policy "Anyone can update notifications"
   on public.notifications for update
-  using (auth.uid() = user_id);
+  using (true);
 
 -- ------------------------------------------------------------------------------
 -- 9. SECURE STORAGE BUCKET FOR MEDIA UPLOADS
@@ -377,27 +413,28 @@ on conflict (id) do nothing;
 drop policy if exists "Media files are publicly viewable" on storage.objects;
 drop policy if exists "Anyone can upload media" on storage.objects;
 drop policy if exists "Authenticated users can upload media" on storage.objects;
+drop policy if exists "Users can delete own media" on storage.objects;
+drop policy if exists "Allow media update" on storage.objects;
+drop policy if exists "Allow media delete" on storage.objects;
 
 -- Public can view attached evidence photos
 create policy "Media files are publicly viewable"
   on storage.objects for select
   using (bucket_id = 'media');
 
--- ONLY authenticated users can upload media attachments
-create policy "Authenticated users can upload media"
+-- Allow uploading media attachments for civic reports & challenges (Clerk authenticated or guest)
+create policy "Anyone can upload media"
   on storage.objects for insert
-  with check (
-    bucket_id = 'media'
-    and auth.role() = 'authenticated'
-  );
+  with check (bucket_id = 'media');
 
--- Users can delete their own uploaded files
-create policy "Users can delete own media"
+-- Allow updating and deleting media
+create policy "Allow media update"
+  on storage.objects for update
+  using (bucket_id = 'media');
+
+create policy "Allow media delete"
   on storage.objects for delete
-  using (
-    bucket_id = 'media'
-    and auth.uid() = owner
-  );
+  using (bucket_id = 'media');
 
 -- ------------------------------------------------------------------------------
 -- 10. INITIAL SEED DATA

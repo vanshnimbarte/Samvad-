@@ -31,7 +31,17 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
 .env*.local
+.env.*
+!.env.example
+
+# Temporary agent scripts and tools
+dump_ui.js
+.claude/
+.cursor/
+.grok/
+supabase/.temp/
 
 # typescript
 *.tsbuildinfo
