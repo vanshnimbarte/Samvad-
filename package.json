@@ -8,6 +8,7 @@
     "@react-native-vector-icons/material-design-icons": "^13.1.4",
     "@supabase/supabase-js": "^2.118.0",
     "expo": "~58.0.20",
+    "expo-auth-session": "~58.0.15",
     "expo-constants": "~58.0.13",
     "expo-dev-client": "~58.0.16",
     "expo-device": "~58.0.5",

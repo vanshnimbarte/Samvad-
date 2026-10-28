@@ -344,28 +344,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setSession({ user: { id: clerkIdToUUID(clerkId), email } });
         syncUserFromSupabase(clerkId, email, name);
       } else {
-        getLocalUserProfile().then((localStored) => {
-          if (!mounted) return;
-          if (localStored?.profile) {
-            setUser(localStored.profile);
-            setUserRoleState((localStored.role || 'citizen') as UserRole);
-            if (localStored.profile.phone) {
-              setSession({ user: { id: clerkIdToUUID(localStored.profile.phone), email: localStored.profile.email } });
-            }
-          } else {
-            setUser({
-              name: 'Guest Citizen',
-              phone: '',
-              email: '',
-              communityRole: 'Guest',
-              district: 'Ranchi',
-              block: 'Ranchi Sadar',
-              isGuest: true,
-            });
-            setUserRoleState('citizen');
-            setSession(null);
-          }
-        });
+        setSession(null);
+        setUser(DEFAULT_USER);
+        setUserRoleState('citizen');
+        clearLocalUserProfile().catch(() => {});
       }
       setIsLoadingAuth(false);
     }
@@ -463,7 +445,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const setUserRole = (role: UserRole) => {
     setUserRoleState(role);
     setUser((prev) => {
-      if (prev && prev.name && prev.name !== 'Guest Citizen' && !prev.isGuest) {
+      if (prev && prev.name) {
         const updated = {
           ...prev,
           communityRole:
@@ -867,7 +849,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               {
                 id: `c-${Date.now()}`,
                 author: user.name,
-                role: user.isGuest ? 'Community Member' : user.communityRole,
+                role: user.communityRole || 'Community Member',
                 comment: comment.trim(),
                 date: 'Just now',
               },
@@ -881,7 +863,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       reportId,
       comment.trim(),
       user.name,
-      user.isGuest ? 'Community Member' : user.communityRole,
+      user.communityRole || 'Community Member',
       session?.user?.id
     );
     showToast('Your comment was posted.', 'success');
@@ -1492,17 +1474,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     showToast(`Logged in as ${cleanName}!`, 'success');
   };
 
-  const continueAsGuest = (name?: string, phone?: string) => {
-    setUser({
-      name: name || 'Guest Citizen',
-      phone: phone || '+91 98000 00000',
-      email: '',
-      communityRole: 'Guest Community Member',
-      district: 'Ranchi',
-      block: 'Ranchi Sadar',
-      isGuest: true,
-    });
-    showToast('Continuing as guest citizen.', 'info');
+  const continueAsGuest = (_name?: string, _phone?: string) => {
+    showToast('Guest access is disabled. Please sign in with Google or Email.', 'error');
   };
 
   const updateUserProfile = async (profile: Partial<UserProfile>) => {
@@ -1561,20 +1534,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
     await clearLocalUserProfile();
     setSession(null);
-    setUser({
-      name: 'Guest Citizen',
-      phone: '',
-      email: '',
-      communityRole: 'Guest',
-      district: 'Ranchi',
-      block: 'Ranchi Sadar',
-      isGuest: true,
-    });
+    setUser(DEFAULT_USER);
     setUserRoleState('citizen');
-    showToast(
-      'You have logged out.',
-      'info'
-    );
+    showToast('You have logged out.', 'info');
   };
 
   return (

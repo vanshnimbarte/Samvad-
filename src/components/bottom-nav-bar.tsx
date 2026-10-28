@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { usePathname, useRouter } from 'expo-router';
+import { useAuth } from '@clerk/expo';
 import {
   Home,
   Compass,
@@ -20,10 +21,15 @@ import { useApp } from '@/context/AppContext';
 import { toHref } from '@/lib/routes';
 
 export default function BottomNavBar() {
+  const { isLoaded, isSignedIn } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { language, fontScale } = useApp();
+
+  if (!isLoaded || !isSignedIn) {
+    return null;
+  }
 
   const normalizedPath = pathname ? pathname.split('?')[0].replace(/\/+$/, '') || '/' : '/';
   const MAIN_TABS = ['/', '/explore', '/map', '/workspace', '/profile'];
