@@ -333,22 +333,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     let mounted = true;
 
     if (isClerkLoaded) {
-      if (isClerkSignedIn && clerkUser) {
-        const clerkId = clerkUser.id;
-        const email = clerkUser.primaryEmailAddress?.emailAddress || '';
-        const name =
-          clerkUser.fullName ||
-          clerkUser.firstName ||
-          (email ? email.split('@')[0] : 'Citizen');
-        setSession({ user: { id: clerkIdToUUID(clerkId), email } });
-        syncUserFromSupabase(clerkId, email, name);
-      } else {
-        setSession(null);
-        setUser(DEFAULT_USER);
-        setUserRoleState('citizen');
-        clearLocalUserProfile().catch(() => {});
-      }
-      setIsLoadingAuth(false);
+      setTimeout(() => {
+        if (!mounted) return;
+        if (isClerkSignedIn && clerkUser) {
+          const clerkId = clerkUser.id;
+          const email = clerkUser.primaryEmailAddress?.emailAddress || '';
+          const name =
+            clerkUser.fullName ||
+            clerkUser.firstName ||
+            (email ? email.split('@')[0] : 'Citizen');
+          setSession({ user: { id: clerkIdToUUID(clerkId), email } });
+          syncUserFromSupabase(clerkId, email, name);
+        } else {
+          setSession(null);
+          setUser(DEFAULT_USER);
+          setUserRoleState('citizen');
+          clearLocalUserProfile().catch(() => {});
+        }
+        setIsLoadingAuth(false);
+      }, 0);
     }
 
     return () => {

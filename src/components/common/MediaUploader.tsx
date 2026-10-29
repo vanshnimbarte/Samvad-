@@ -31,6 +31,14 @@ export interface UploadedMediaItem {
   compressedSizeMb: number;
 }
 
+function generateMediaId(): string {
+  return `media-${Date.now()}`;
+}
+
+function generateMediaFileName(prefix: 'camera' | 'gallery' | 'video', ext: 'jpg' | 'mp4'): string {
+  return `${prefix}_${Date.now()}.${ext}`;
+}
+
 interface MediaUploaderProps {
   mediaList: UploadedMediaItem[];
   onChange: (media: UploadedMediaItem[]) => void;
@@ -63,13 +71,13 @@ export function MediaUploader({ mediaList, onChange, onSkip }: MediaUploaderProp
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
-        const fileName = asset.fileName || `camera_${Date.now()}.jpg`;
+        const fileName = asset.fileName || generateMediaFileName('camera', 'jpg');
         setCompressing(true);
         setCompressingFileName(fileName);
 
         setTimeout(() => {
           const newItem: UploadedMediaItem = {
-            id: `media-${Date.now()}`,
+            id: generateMediaId(),
             type: 'image',
             uri: asset.uri,
             fileName,
@@ -102,13 +110,13 @@ export function MediaUploader({ mediaList, onChange, onSkip }: MediaUploaderProp
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
-        const fileName = asset.fileName || `gallery_${Date.now()}.jpg`;
+        const fileName = asset.fileName || generateMediaFileName('gallery', 'jpg');
         setCompressing(true);
         setCompressingFileName(fileName);
 
         setTimeout(() => {
           const newItem: UploadedMediaItem = {
-            id: `media-${Date.now()}`,
+            id: generateMediaId(),
             type: 'image',
             uri: asset.uri,
             fileName,
@@ -148,9 +156,9 @@ export function MediaUploader({ mediaList, onChange, onSkip }: MediaUploaderProp
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
-        const fileName = asset.fileName || `video_${Date.now()}.mp4`;
+        const fileName = asset.fileName || generateMediaFileName('video', 'mp4');
         const newItem: UploadedMediaItem = {
-          id: `media-${Date.now()}`,
+          id: generateMediaId(),
           type: 'video',
           uri: asset.uri,
           fileName,
@@ -182,7 +190,7 @@ export function MediaUploader({ mediaList, onChange, onSkip }: MediaUploaderProp
 
     setTimeout(() => {
       const newItem: UploadedMediaItem = {
-        id: `media-${Date.now()}`,
+        id: generateMediaId(),
         type,
         uri:
           type === 'video'

@@ -23,6 +23,16 @@ const STATUS_COLORS: Record<string, string> = {
   Closed: '#6B7280',
 };
 
+function getDeterministicOffset(id: string, factor: number): number {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash << 5) - hash + id.charCodeAt(i);
+    hash |= 0;
+  }
+  const normalized = ((Math.abs(hash * factor) % 100) / 100) - 0.5;
+  return normalized * 0.05;
+}
+
 export function ReportMapView({ reports, onSelect, selectedId, height = 380 }: Props) {
   const html = useMemo(() => {
     const points = reports.map((r) => {
@@ -31,8 +41,8 @@ export function ReportMapView({ reports, onSelect, selectedId, height = 380 }: P
 
       if (!lat || !lng || isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) {
         const fallback = getDistrictCoordinates(r.location?.district || 'Ranchi');
-        lat = fallback.latitude + (Math.random() - 0.5) * 0.05;
-        lng = fallback.longitude + (Math.random() - 0.5) * 0.05;
+        lat = fallback.latitude + getDeterministicOffset(r.id, 1);
+        lng = fallback.longitude + getDeterministicOffset(r.id, 3);
       }
 
       const color = STATUS_COLORS[r.status] || '#3B82F6';
