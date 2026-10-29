@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: SamadhanColors.background },
   back: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: Spacing.lg, paddingTop: Spacing.md },
   backText: { fontWeight: '700', color: SamadhanColors.primary },
-  content: { padding: Spacing.lg },
+  content: { padding: Spacing.lg, maxWidth: 720, width: '100%', alignSelf: 'center' },
   h1: { fontSize: 22, fontWeight: '800', color: SamadhanColors.textPrimary },
   sub: { marginTop: 6, marginBottom: Spacing.lg, color: SamadhanColors.textSecondary, fontSize: 13, lineHeight: 18 },
   label: { marginTop: Spacing.md, marginBottom: 6, fontSize: 12, fontWeight: '800', color: SamadhanColors.textPrimary },

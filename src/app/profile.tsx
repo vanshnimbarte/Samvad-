@@ -125,13 +125,22 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleSwitchAccount = () => {
-    router.push('/auth');
+  const handleSwitchAccount = async () => {
+    try {
+      await logout();
+    } catch (e) {
+      console.warn('Error during logout for switch account:', e);
+    }
+    router.replace('/auth');
   };
 
   const handleLogout = async () => {
-    await logout();
-    router.push('/auth');
+    try {
+      await logout();
+    } catch (e) {
+      console.warn('Error during logout:', e);
+    }
+    router.replace('/auth');
   };
 
   return (
@@ -581,6 +590,9 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: Spacing.lg,
+    maxWidth: 720,
+    width: '100%',
+    alignSelf: 'center',
   },
   profileCard: {
     backgroundColor: SamadhanColors.surface,

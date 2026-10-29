@@ -12,7 +12,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useSignIn, useSignUp, useSSO } from '@clerk/expo';
+import { useAuth, useClerk, useSignIn, useSignUp, useSSO } from '@clerk/expo';
+import * as AuthSession from 'expo-auth-session';
 import Svg, { Path } from 'react-native-svg';
 import {
   ShieldCheck,
@@ -24,6 +25,7 @@ import {
   User,
   MapPin,
   Building,
+  Building2,
   Phone,
   Eye,
   EyeOff,
@@ -65,6 +67,8 @@ function GoogleIcon({ size = 20 }: { size?: number }) {
 
 export default function AuthScreen() {
   const router = useRouter();
+  const clerk = useClerk();
+  const { isLoaded: isAuthLoaded, isSignedIn, signOut } = useAuth();
   const { signIn } = useSignIn();
   const { signUp } = useSignUp();
   const { startSSOFlow } = useSSO();
@@ -72,6 +76,19 @@ export default function AuthScreen() {
 
   const [portalRole, setPortalRole] = useState<UserRole>('citizen');
   const [isSignUp, setIsSignUp] = useState(false);
+
+  // If already authenticated or a session exists in Clerk, activate and redirect straight to the main app
+  useEffect(() => {
+    if (isAuthLoaded) {
+      if (isSignedIn) {
+        router.replace('/');
+      } else if (clerk.session) {
+        clerk.setActive({ session: clerk.session.id }).then(() => {
+          router.replace('/');
+        }).catch(() => {});
+      }
+    }
+  }, [isAuthLoaded, isSignedIn, clerk.session, router]);
 
   // Form Fields
   const [email, setEmail] = useState('');
@@ -102,17 +119,36 @@ export default function AuthScreen() {
     return () => clearInterval(interval);
   }, [isVerifyingEmail, resendTimer]);
 
-  const handleRoleChange = (role: UserRole) => {
-    setPortalRole(role);
-    setUserRole(role);
-  };
-
   // Google OAuth Flow with Clerk
   const handleGoogleAuth = async () => {
+    if (isGoogleSubmitting) return;
     setIsGoogleSubmitting(true);
     try {
+      // If a session is already present on the client, activate it and proceed
+      if (clerk.session) {
+        await clerk.setActive({ session: clerk.session.id });
+        setUserRole(portalRole);
+        showToast('Signed in successfully with Google!', 'success');
+        router.replace('/');
+        return;
+      }
+
+      // If a session is already active in Clerk, clean it up before starting a new SSO flow
+      if (isSignedIn) {
+        try {
+          await signOut();
+        } catch (signOutErr) {
+          console.warn('Sign-out before Google auth:', signOutErr);
+        }
+      }
+
+      const redirectUrl = AuthSession.makeRedirectUri({
+        path: 'sso-callback',
+      });
+
       const { createdSessionId, setActive, signUp: ssoSignUp } = await startSSOFlow({
         strategy: 'oauth_google',
+        redirectUrl,
         unsafeMetadata: {
           role: portalRole,
           district: district.trim() || 'Ranchi',
@@ -132,17 +168,30 @@ export default function AuthScreen() {
         showToast('Additional setup needed for your Google account.', 'info');
       }
     } catch (err: any) {
-      const errStr = String(err?.message || err || '');
+      const errStr = String(err?.errors?.[0]?.message || err?.message || err || '').toLowerCase();
+      const isAlreadySignedIn =
+        errStr.includes('already signed in') ||
+        err?.errors?.[0]?.code === 'session_exists';
+
+      if (isAlreadySignedIn) {
+        setUserRole(portalRole);
+        showToast('You are already signed in!', 'success');
+        router.replace('/');
+        return;
+      }
+
       if (
         errStr.includes('cancelled') ||
         errStr.includes('canceled') ||
         errStr.includes('dismissed') ||
-        errStr.includes('SIGN_IN_CANCELLED')
+        errStr.includes('SIGN_IN_CANCELLED') ||
+        err?.code === 'SIGN_IN_CANCELLED' ||
+        err?.code === '-5'
       ) {
         return;
       }
       console.error('Google auth error:', err);
-      showToast(err?.message || 'Failed to authenticate with Google.', 'error');
+      showToast(err?.errors?.[0]?.message || err?.message || 'Failed to authenticate with Google.', 'error');
     } finally {
       setIsGoogleSubmitting(false);
     }
@@ -150,6 +199,8 @@ export default function AuthScreen() {
 
   // Email Authentication (Sign In or Sign Up)
   const handleEmailAuth = async () => {
+    if (isEmailSubmitting) return;
+
     if (!email.trim() || !email.includes('@')) {
       showToast('Please enter a valid email address.', 'error');
       return;
@@ -162,6 +213,23 @@ export default function AuthScreen() {
 
     setIsEmailSubmitting(true);
     try {
+      // If a session is already present on the client, activate it and proceed
+      if (clerk.session) {
+        await clerk.setActive({ session: clerk.session.id });
+        setUserRole(portalRole);
+        showToast('You are already signed in! Welcome back.', 'success');
+        router.replace('/');
+        return;
+      }
+
+      if (isSignedIn) {
+        try {
+          await signOut();
+        } catch (signOutErr) {
+          console.warn('Sign-out before email auth:', signOutErr);
+        }
+      }
+
       if (isSignUp) {
         if (!fullName.trim()) {
           showToast('Please enter your full name.', 'error');
@@ -184,6 +252,22 @@ export default function AuthScreen() {
         });
 
         if (signUpError) {
+          const errStr = String(signUpError.message || '').toLowerCase();
+          const isAlreadySignedIn =
+            errStr.includes('already signed in') ||
+            signUpError.code === 'session_exists';
+
+          if (isAlreadySignedIn) {
+            const activeSessionId = (clerk as any).session?.id || (clerk as any).client?.sessions?.[0]?.id;
+            if (activeSessionId) {
+              await clerk.setActive({ session: activeSessionId });
+            }
+            setUserRole(portalRole);
+            showToast('You are already signed in! Welcome back.', 'success');
+            router.replace('/');
+            return;
+          }
+
           showToast(signUpError.message || 'Registration failed. Please try again.', 'error');
           setIsEmailSubmitting(false);
           return;
@@ -206,6 +290,22 @@ export default function AuthScreen() {
         });
 
         if (signInError) {
+          const errStr = String(signInError.message || '').toLowerCase();
+          const isAlreadySignedIn =
+            errStr.includes('already signed in') ||
+            signInError.code === 'session_exists';
+
+          if (isAlreadySignedIn) {
+            const activeSessionId = (clerk as any).session?.id || (clerk as any).client?.sessions?.[0]?.id;
+            if (activeSessionId) {
+              await clerk.setActive({ session: activeSessionId });
+            }
+            setUserRole(portalRole);
+            showToast('You are already signed in! Welcome back.', 'success');
+            router.replace('/');
+            return;
+          }
+
           showToast(signInError.message || 'Incorrect email or password.', 'error');
           setIsEmailSubmitting(false);
           return;
@@ -219,6 +319,7 @@ export default function AuthScreen() {
             return;
           }
 
+          setUserRole(portalRole);
           showToast('Welcome back! Signed in successfully.', 'success');
           router.replace('/');
           return;
@@ -242,7 +343,18 @@ export default function AuthScreen() {
         setIsEmailSubmitting(false);
       }
     } catch (err: any) {
-      showToast(err?.message || 'Authentication error. Please try again.', 'error');
+      const errStr = String(err?.errors?.[0]?.message || err?.message || err || '').toLowerCase();
+      const isAlreadySignedIn =
+        errStr.includes('already signed in') ||
+        err?.errors?.[0]?.code === 'session_exists';
+
+      if (isAlreadySignedIn) {
+        setUserRole(portalRole);
+        showToast('You are already signed in!', 'success');
+        router.replace('/');
+        return;
+      }
+      showToast(err?.errors?.[0]?.message || err?.message || 'Authentication error. Please try again.', 'error');
     } finally {
       setIsEmailSubmitting(false);
     }
@@ -344,13 +456,6 @@ export default function AuthScreen() {
     }
   };
 
-  const roleDescriptions: Record<UserRole, string> = {
-    citizen: 'Village, Panchayat, or Ward resident reporting challenges',
-    university: 'Faculty, student, or researcher leading solution teams',
-    industry: 'Corporate or MSME partner mentoring & funding prototypes',
-    government: 'District or state department officer monitoring outcomes',
-  };
-
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
@@ -381,49 +486,20 @@ export default function AuthScreen() {
             </View>
           </View>
 
-          {/* Role Selection */}
-          <View style={styles.roleContainer}>
-            <View style={styles.roleHeaderRow}>
-              <Text style={styles.roleLabel}>I am joining as:</Text>
-              <View style={styles.roleTag}>
-                <Sparkles size={11} color={SamadhanColors.primary} />
-                <Text style={styles.roleTagText}>
-                  {portalRole === 'citizen'
-                    ? 'Citizen'
-                    : portalRole === 'university'
-                    ? 'University'
-                    : portalRole === 'industry'
-                    ? 'Industry'
-                    : 'Admin'}
-                </Text>
+          {/* Citizen Portal Focus Header */}
+          <View style={styles.citizenHeaderCard}>
+            <View style={styles.citizenBadgeRow}>
+              <View style={styles.citizenBadge}>
+                <Text style={styles.citizenBadgeText}>👤 Citizen Portal</Text>
               </View>
+              <Text style={styles.citizenBadgeHint}>Mobile Redressal Desk</Text>
             </View>
-
-            <View style={styles.roleRow}>
-              {(['citizen', 'university', 'industry', 'government'] as UserRole[]).map((role) => (
-                <Pressable
-                  key={role}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Select role ${role}`}
-                  onPress={() => handleRoleChange(role)}
-                  style={[styles.roleChip, portalRole === role && styles.roleChipOn]}>
-                  <Text
-                    style={[
-                      styles.roleChipText,
-                      portalRole === role && styles.roleChipTextOn,
-                    ]}>
-                    {role === 'citizen'
-                      ? '👤 Citizen'
-                      : role === 'university'
-                      ? '🎓 University'
-                      : role === 'industry'
-                      ? '🏢 Industry'
-                      : '🏛️ Admin'}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-            <Text style={styles.roleHintText}>{roleDescriptions[portalRole]}</Text>
+            <Text style={styles.citizenHeaderText}>
+              Report Local Challenges & Track Civic Progress
+            </Text>
+            <Text style={styles.citizenHeaderSub}>
+              For Village, Panchayat, and Ward residents of Jharkhand. Submit problems with photos & GPS to connect with campus innovators.
+            </Text>
           </View>
 
           {/* Verification Code View */}
@@ -755,6 +831,19 @@ export default function AuthScreen() {
             </View>
           )}
 
+          {/* Institutional Note for Officers & Universities */}
+          <View style={styles.institutionalNoteCard}>
+            <Building2 size={16} color={SamadhanColors.primary} style={{ marginTop: 2 }} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.institutionalNoteTitle}>
+                Government Officer, University Faculty, or CSR Lead?
+              </Text>
+              <Text style={styles.institutionalNoteSub}>
+                Administrative validation queues, duplicate clustering, and student team rosters are optimized for desktop on the Samvad Web Command Desk.
+              </Text>
+            </View>
+          </View>
+
           {/* Privacy Note */}
           <View style={styles.privacyNote}>
             <ShieldCheck size={16} color="#16A34A" />
@@ -833,69 +922,72 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#2563EB',
   },
-  roleContainer: {
-    backgroundColor: SamadhanColors.surface,
+  citizenHeaderCard: {
+    backgroundColor: '#FFFFFF',
     borderRadius: Radius.lg,
     padding: Spacing.md,
     borderWidth: 1,
-    borderColor: SamadhanColors.border,
+    borderColor: '#E2E8F0',
     marginBottom: Spacing.lg,
+    ...Shadows.sm,
   },
-  roleHeaderRow: {
+  citizenBadgeRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    justifyContent: 'space-between',
+    marginBottom: 6,
   },
-  roleLabel: {
+  citizenBadge: {
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: Radius.full,
+  },
+  citizenBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: SamadhanColors.primary,
+  },
+  citizenBadgeHint: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: SamadhanColors.textMuted,
+  },
+  citizenHeaderText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: SamadhanColors.textPrimary,
+    lineHeight: 18,
+  },
+  citizenHeaderSub: {
+    fontSize: 11,
+    color: SamadhanColors.textSecondary,
+    lineHeight: 16,
+    marginTop: 4,
+  },
+  institutionalNoteCard: {
+    flexDirection: 'row',
+    gap: 10,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: Radius.md,
+    padding: 12,
+    marginBottom: Spacing.lg,
+    alignItems: 'flex-start',
+  },
+  institutionalNoteTitle: {
     fontSize: 12,
     fontWeight: '800',
     color: SamadhanColors.textPrimary,
   },
-  roleTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: SamadhanColors.primarySurface,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: Radius.full,
-  },
-  roleTagText: {
+  institutionalNoteSub: {
     fontSize: 11,
-    fontWeight: '700',
-    color: SamadhanColors.primary,
-  },
-  roleRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginBottom: 6,
-  },
-  roleChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: Radius.full,
-    borderWidth: 1,
-    borderColor: SamadhanColors.border,
-    backgroundColor: '#F8FAFC',
-  },
-  roleChipOn: {
-    backgroundColor: SamadhanColors.primary,
-    borderColor: SamadhanColors.primary,
-  },
-  roleChipText: {
-    fontSize: 11,
-    fontWeight: '700',
     color: SamadhanColors.textSecondary,
-  },
-  roleChipTextOn: {
-    color: '#FFFFFF',
-  },
-  roleHintText: {
-    fontSize: 11,
-    color: SamadhanColors.textMuted,
-    fontStyle: 'italic',
+    lineHeight: 15,
+    marginTop: 2,
   },
   card: {
     backgroundColor: SamadhanColors.surface,

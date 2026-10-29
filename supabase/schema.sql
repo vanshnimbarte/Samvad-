@@ -1,531 +1,268 @@
--- ==============================================================================
--- SAMVAD JHARKHAND - PRODUCTION DATABASE SCHEMA & STRICT RLS POLICIES
--- ==============================================================================
--- Run this script in the Supabase SQL Editor (Dashboard -> SQL Editor -> New Query)
--- to enforce strict Row Level Security (RLS), auto profile triggers, and tables.
--- ==============================================================================
+-- ============================================================
+-- SAMVAD JHARKHAND - COMPLETE SUPABASE DATABASE SCHEMA
+-- ============================================================
+-- Run this script in your Supabase Dashboard:
+-- https://supabase.com/dashboard/project/iajpmeoqtuqrwwesuvgq/sql
+-- ============================================================
 
--- ------------------------------------------------------------------------------
--- 1. PROFILES TABLE (Strict RLS & Privacy Controls)
--- ------------------------------------------------------------------------------
-create table if not exists public.profiles (
-  id uuid primary key,
-  email text,
-  full_name text,
-  phone text,
-  role text default 'citizen' check (role in ('citizen', 'university', 'industry', 'government')),
-  district text default 'Ranchi',
-  block text default 'Ranchi Sadar',
-  community_role text,
-  avatar_url text,
-  is_verified boolean default false,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
-  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+-- 1. Profiles Table (Citizens, University, Industry, Government)
+CREATE TABLE IF NOT EXISTS public.profiles (
+  id TEXT PRIMARY KEY,
+  full_name TEXT,
+  email TEXT,
+  phone TEXT,
+  role TEXT DEFAULT 'citizen',
+  district TEXT DEFAULT 'Ranchi',
+  block TEXT DEFAULT 'Ranchi Sadar',
+  community_role TEXT DEFAULT 'Citizen Member',
+  avatar_url TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-alter table public.profiles enable row level security;
-
-grant select, insert, update on table public.profiles to anon, authenticated;
-
-alter table public.profiles drop constraint if exists profiles_id_fkey;
-
-drop policy if exists "Public profiles are viewable by everyone" on public.profiles;
-drop policy if exists "Profiles are viewable by authenticated users" on public.profiles;
-drop policy if exists "Users can insert their own profile" on public.profiles;
-drop policy if exists "Users can insert own profile" on public.profiles;
-drop policy if exists "Users can update own profile" on public.profiles;
-drop policy if exists "Profiles are viewable by everyone" on public.profiles;
-drop policy if exists "Allow all select on profiles" on public.profiles;
-drop policy if exists "Allow all insert on profiles" on public.profiles;
-drop policy if exists "Allow all update on profiles" on public.profiles;
-
-create policy "Allow all select on profiles"
-  on public.profiles for select
-  using (true);
-
-create policy "Allow all insert on profiles"
-  on public.profiles for insert
-  with check (true);
-
-create policy "Allow all update on profiles"
-  on public.profiles for update
-  using (true);
-
--- Trigger to auto-create profile on Supabase Auth user creation
-create or replace function public.handle_new_user()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-  insert into public.profiles (
-    id,
-    email,
-    full_name,
-    phone,
-    role,
-    district,
-    block,
-    community_role,
-    is_verified
-  )
-  values (
-    new.id,
-    new.email,
-    coalesce(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
-    coalesce(new.raw_user_meta_data->>'phone', new.phone, ''),
-    coalesce(new.raw_user_meta_data->>'role', 'citizen'),
-    coalesce(new.raw_user_meta_data->>'district', 'Ranchi'),
-    coalesce(new.raw_user_meta_data->>'block', 'Ranchi Sadar'),
-    coalesce(new.raw_user_meta_data->>'community_role', 'Citizen Member'),
-    false
-  )
-  on conflict (id) do update set
-    email = excluded.email,
-    full_name = coalesce(excluded.full_name, profiles.full_name),
-    phone = coalesce(excluded.phone, profiles.phone),
-    role = coalesce(excluded.role, profiles.role),
-    district = coalesce(excluded.district, profiles.district),
-    block = coalesce(excluded.block, profiles.block),
-    community_role = coalesce(excluded.community_role, profiles.community_role),
-    updated_at = timezone('utc'::text, now());
-
-  return new;
-end;
-$$;
-
-revoke execute on function public.handle_new_user() from public, anon, authenticated;
-
-drop trigger if exists on_auth_user_created on auth.users;
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute procedure public.handle_new_user();
-
--- Backfill any existing users in auth.users
-insert into public.profiles (id, email, full_name, phone, role, district, block, community_role, is_verified)
-select
-  id,
-  email,
-  coalesce(raw_user_meta_data->>'full_name', raw_user_meta_data->>'name', split_part(email, '@', 1)),
-  coalesce(raw_user_meta_data->>'phone', phone, ''),
-  coalesce(raw_user_meta_data->>'role', 'citizen'),
-  coalesce(raw_user_meta_data->>'district', 'Ranchi'),
-  coalesce(raw_user_meta_data->>'block', 'Ranchi Sadar'),
-  'Citizen Member',
-  false
-from auth.users
-on conflict (id) do nothing;
-
--- ------------------------------------------------------------------------------
--- 2. CHALLENGES TABLE (Restricted Updates & Validated Insertion)
--- ------------------------------------------------------------------------------
-create table if not exists public.challenges (
-  id text primary key,
-  user_id uuid,
-  title text not null,
-  domain text not null,
-  domain_icon text,
-  domain_color text,
-  district text not null,
-  location text not null,
-  description text not null,
-  stage text default 'Submitted' check (stage in ('Submitted', 'Under Review', 'Validated', 'Assigned', 'In Progress', 'Pilot Testing', 'Deployed')),
-  urgency text default 'Medium' check (urgency in ('Low', 'Medium', 'High', 'Critical')),
-  impact_level text default 'Medium',
-  submitter_type text default 'Citizen',
-  submitted_by text not null,
-  submitted_at text default to_char(now(), 'YYYY-MM-DD'),
-  beneficiaries integer default 100,
-  upvotes integer default 0,
-  comments integer default 0,
-  photo_count integer default 0,
-  ai_tags jsonb default '[]'::jsonb,
-  milestones jsonb default '[]'::jsonb,
-  assigned_university jsonb,
-  industry_partner jsonb,
-  progress_percent integer default 0,
-  image_url text,
-  required_skills jsonb default '[]'::jsonb,
-  funding_available text,
-  applications integer default 0,
-  deadline text,
-  department text,
-  ai_confidence integer default 85,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
-  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+-- 2. Challenges Table (Core societal challenges)
+CREATE TABLE IF NOT EXISTS public.challenges (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  domain TEXT NOT NULL,
+  description TEXT,
+  stage TEXT DEFAULT 'Submitted',
+  district TEXT NOT NULL,
+  block TEXT,
+  location_name TEXT,
+  coordinates JSONB,
+  severity TEXT DEFAULT 'Medium',
+  submitter_name TEXT,
+  submitter_type TEXT DEFAULT 'Citizen',
+  submitter_id TEXT,
+  assigned_university JSONB,
+  industry_partner JSONB,
+  solutions_count INT DEFAULT 0,
+  upvotes INT DEFAULT 1,
+  media_urls JSONB DEFAULT '[]'::jsonb,
+  tags JSONB DEFAULT '[]'::jsonb,
+  ai_confidence INT DEFAULT 90,
+  estimated_beneficiaries TEXT,
+  budget_estimate TEXT,
+  similar_challenge_ids JSONB DEFAULT '[]'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-alter table public.challenges enable row level security;
-
-alter table public.challenges drop constraint if exists challenges_user_id_fkey;
-grant select, insert, update on table public.challenges to anon, authenticated;
-
-drop policy if exists "Challenges are viewable by everyone" on public.challenges;
-drop policy if exists "Anyone can submit a challenge" on public.challenges;
-drop policy if exists "Users or admins can update challenges" on public.challenges;
-drop policy if exists "Public can view challenges" on public.challenges;
-drop policy if exists "Authenticated users can submit challenges" on public.challenges;
-drop policy if exists "Authorized roles can update challenges" on public.challenges;
-
--- Public can view challenges to explore societal issues
-create policy "Public can view challenges"
-  on public.challenges for select
-  using (true);
-
--- Anyone (Clerk authenticated or guest) can submit challenges to Supabase
-create policy "Anyone can submit challenges"
-  on public.challenges for insert
-  with check (true);
-
--- Anyone can update challenges to update milestones, upvotes, stages
-create policy "Anyone can update challenges"
-  on public.challenges for update
-  using (true);
-
--- ------------------------------------------------------------------------------
--- 3. CIVIC REPORTS TABLE (Strict Auth Insertion & Department Updates)
--- ------------------------------------------------------------------------------
-create table if not exists public.civic_reports (
-  id text primary key,
-  user_id uuid,
-  title_en text not null,
-  title_hi text,
-  description_en text not null,
-  description_hi text,
-  category_id text not null,
-  status text default 'Received',
-  urgency text default 'medium' check (urgency in ('low', 'medium', 'high', 'emergency')),
-  location jsonb not null,
-  submitted_by jsonb not null,
-  affected_count integer default 50,
-  affected_groups jsonb default '[]'::jsonb,
-  recurring boolean default false,
-  supporters integer default 1,
-  media jsonb default '[]'::jsonb,
-  timeline jsonb default '[]'::jsonb,
-  responsible_org jsonb,
-  next_expected_action jsonb,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
-  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+-- 3. Challenge Comments / Community Discussion
+CREATE TABLE IF NOT EXISTS public.challenge_comments (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  challenge_id TEXT REFERENCES public.challenges(id) ON DELETE CASCADE,
+  user_id TEXT,
+  author_name TEXT NOT NULL,
+  author_role TEXT,
+  comment_text TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-alter table public.civic_reports enable row level security;
-
-alter table public.civic_reports drop constraint if exists civic_reports_user_id_fkey;
-grant select, insert, update on table public.civic_reports to anon, authenticated;
-
-drop policy if exists "Reports are viewable by everyone" on public.civic_reports;
-drop policy if exists "Anyone can submit a report" on public.civic_reports;
-drop policy if exists "Reports can be updated" on public.civic_reports;
-drop policy if exists "Public can view reports" on public.civic_reports;
-drop policy if exists "Authenticated users can submit reports" on public.civic_reports;
-drop policy if exists "Authorized users can update reports" on public.civic_reports;
-
--- Public can view civic reports
-create policy "Public can view reports"
-  on public.civic_reports for select
-  using (true);
-
--- Anyone can submit reports
-create policy "Anyone can submit reports"
-  on public.civic_reports for insert
-  with check (true);
-
--- Anyone can update reports
-create policy "Anyone can update reports"
-  on public.civic_reports for update
-  using (true);
-
--- ------------------------------------------------------------------------------
--- 4. CHALLENGE COMMENTS TABLE
--- ------------------------------------------------------------------------------
-create table if not exists public.challenge_comments (
-  id uuid default gen_random_uuid() primary key,
-  challenge_id text references public.challenges(id) on delete cascade not null,
-  user_id uuid,
-  author_name text not null,
-  author_role text not null,
-  comment_text text not null,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+-- 4. Challenge Supports / Upvotes
+CREATE TABLE IF NOT EXISTS public.challenge_supports (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  challenge_id TEXT REFERENCES public.challenges(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(challenge_id, user_id)
 );
 
-alter table public.challenge_comments drop constraint if exists challenge_comments_user_id_fkey;
-grant select, insert on table public.challenge_comments to anon, authenticated;
-
-drop policy if exists "Challenge comments are viewable by everyone" on public.challenge_comments;
-drop policy if exists "Anyone can post a comment" on public.challenge_comments;
-drop policy if exists "Public can view challenge comments" on public.challenge_comments;
-drop policy if exists "Authenticated users can post challenge comments" on public.challenge_comments;
-
-create policy "Public can view challenge comments"
-  on public.challenge_comments for select
-  using (true);
-
-create policy "Anyone can post challenge comments"
-  on public.challenge_comments for insert
-  with check (true);
-
--- ------------------------------------------------------------------------------
--- 5. REPORT COMMENTS TABLE
--- ------------------------------------------------------------------------------
-create table if not exists public.report_comments (
-  id uuid default gen_random_uuid() primary key,
-  report_id text references public.civic_reports(id) on delete cascade not null,
-  user_id uuid,
-  author_name text not null,
-  author_role text not null,
-  comment_text text not null,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+-- 5. Civic Reports Table (6-Step Detailed Reports)
+CREATE TABLE IF NOT EXISTS public.civic_reports (
+  id TEXT PRIMARY KEY,
+  category TEXT NOT NULL,
+  description TEXT NOT NULL,
+  urgency TEXT DEFAULT 'Standard',
+  status TEXT DEFAULT 'Under Review',
+  district TEXT NOT NULL,
+  block TEXT,
+  village_or_ward TEXT,
+  landmark TEXT,
+  location_notes TEXT,
+  coordinates JSONB,
+  photos JSONB DEFAULT '[]'::jsonb,
+  voice_note_uri TEXT,
+  reporter_name TEXT,
+  reporter_phone TEXT,
+  reporter_id TEXT,
+  tracking_id TEXT,
+  timeline JSONB DEFAULT '[]'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-alter table public.report_comments enable row level security;
-alter table public.report_comments drop constraint if exists report_comments_user_id_fkey;
-grant select, insert on table public.report_comments to anon, authenticated;
+-- ============================================================
+-- ROW LEVEL SECURITY (RLS) POLICIES
+-- Ensures mobile app & web client with anon key can read & write
+-- ============================================================
 
-drop policy if exists "Report comments are viewable by everyone" on public.report_comments;
-drop policy if exists "Anyone can comment on a report" on public.report_comments;
-drop policy if exists "Public can view report comments" on public.report_comments;
-drop policy if exists "Authenticated users can post report comments" on public.report_comments;
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.challenges ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.challenge_comments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.challenge_supports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.civic_reports ENABLE ROW LEVEL SECURITY;
 
-create policy "Public can view report comments"
-  on public.report_comments for select
-  using (true);
+-- Allow public read/write for all tables using the client anon key
+DROP POLICY IF EXISTS "Public access profiles" ON public.profiles;
+CREATE POLICY "Public access profiles" ON public.profiles FOR ALL USING (true) WITH CHECK (true);
 
-create policy "Anyone can post report comments"
-  on public.report_comments for insert
-  with check (true);
+DROP POLICY IF EXISTS "Public access challenges" ON public.challenges;
+CREATE POLICY "Public access challenges" ON public.challenges FOR ALL USING (true) WITH CHECK (true);
 
--- ------------------------------------------------------------------------------
--- 6. CHALLENGE UPVOTES TABLE
--- ------------------------------------------------------------------------------
-create table if not exists public.challenge_upvotes (
-  id uuid default gen_random_uuid() primary key,
-  challenge_id text references public.challenges(id) on delete cascade not null,
-  user_id uuid not null,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
-  unique (challenge_id, user_id)
-);
+DROP POLICY IF EXISTS "Public access comments" ON public.challenge_comments;
+CREATE POLICY "Public access comments" ON public.challenge_comments FOR ALL USING (true) WITH CHECK (true);
 
-alter table public.challenge_upvotes enable row level security;
-alter table public.challenge_upvotes drop constraint if exists challenge_upvotes_user_id_fkey;
-grant select, insert, delete on table public.challenge_upvotes to anon, authenticated;
+DROP POLICY IF EXISTS "Public access supports" ON public.challenge_supports;
+CREATE POLICY "Public access supports" ON public.challenge_supports FOR ALL USING (true) WITH CHECK (true);
 
-drop policy if exists "Upvotes viewable by everyone" on public.challenge_upvotes;
-drop policy if exists "Authenticated users can upvote" on public.challenge_upvotes;
-drop policy if exists "Users can remove their upvote" on public.challenge_upvotes;
-drop policy if exists "Public can view upvotes" on public.challenge_upvotes;
-drop policy if exists "Users can remove own upvote" on public.challenge_upvotes;
+DROP POLICY IF EXISTS "Public access reports" ON public.civic_reports;
+CREATE POLICY "Public access reports" ON public.civic_reports FOR ALL USING (true) WITH CHECK (true);
 
-create policy "Public can view upvotes"
-  on public.challenge_upvotes for select
-  using (true);
+-- ============================================================
+-- STORAGE BUCKETS FOR CHALLENGE PHOTOS & MEDIA
+-- ============================================================
 
-create policy "Anyone can upvote"
-  on public.challenge_upvotes for insert
-  with check (true);
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('media', 'media', true), ('challenge-media', 'challenge-media', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
 
-create policy "Anyone can remove upvote"
-  on public.challenge_upvotes for delete
-  using (true);
+DROP POLICY IF EXISTS "Public media select" ON storage.objects;
+CREATE POLICY "Public media select" ON storage.objects
+FOR SELECT USING (bucket_id IN ('media', 'challenge-media'));
 
--- ------------------------------------------------------------------------------
--- 7. REPORT SUPPORTS TABLE
--- ------------------------------------------------------------------------------
-create table if not exists public.report_supports (
-  id uuid default gen_random_uuid() primary key,
-  report_id text references public.civic_reports(id) on delete cascade not null,
-  user_id uuid not null,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
-  unique (report_id, user_id)
-);
+DROP POLICY IF EXISTS "Public media insert" ON storage.objects;
+CREATE POLICY "Public media insert" ON storage.objects
+FOR INSERT WITH CHECK (bucket_id IN ('media', 'challenge-media'));
 
-alter table public.report_supports enable row level security;
-alter table public.report_supports drop constraint if exists report_supports_user_id_fkey;
-grant select, insert, delete on table public.report_supports to anon, authenticated;
+-- ============================================================
+-- SEED INITIAL CHALLENGES
+-- ============================================================
 
-drop policy if exists "Supports viewable by everyone" on public.report_supports;
-drop policy if exists "Users can support reports" on public.report_supports;
-drop policy if exists "Users can remove support" on public.report_supports;
-drop policy if exists "Public can view supports" on public.report_supports;
-drop policy if exists "Authenticated users can support reports" on public.report_supports;
-drop policy if exists "Users can remove own support" on public.report_supports;
-
-create policy "Public can view supports"
-  on public.report_supports for select
-  using (true);
-
-create policy "Anyone can support reports"
-  on public.report_supports for insert
-  with check (true);
-
-create policy "Anyone can remove support"
-  on public.report_supports for delete
-  using (true);
-
--- ------------------------------------------------------------------------------
--- 8. NOTIFICATIONS TABLE
--- ------------------------------------------------------------------------------
-create table if not exists public.notifications (
-  id uuid default gen_random_uuid() primary key,
-  user_id uuid not null,
-  type text not null,
-  title_en text not null,
-  title_hi text,
-  message_en text not null,
-  message_hi text,
-  report_id text,
-  challenge_id text,
-  read boolean default false,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
-);
-
-alter table public.notifications enable row level security;
-alter table public.notifications drop constraint if exists notifications_user_id_fkey;
-grant select, insert, update on table public.notifications to anon, authenticated;
-
-drop policy if exists "Users can see own notifications" on public.notifications;
-drop policy if exists "Users can update own notifications" on public.notifications;
-drop policy if exists "Users can view own notifications" on public.notifications;
-drop policy if exists "Anyone can view notifications" on public.notifications;
-drop policy if exists "Anyone can update notifications" on public.notifications;
-drop policy if exists "Anyone can insert notifications" on public.notifications;
-
-create policy "Anyone can view notifications"
-  on public.notifications for select
-  using (true);
-
-create policy "Anyone can insert notifications"
-  on public.notifications for insert
-  with check (true);
-
-create policy "Anyone can update notifications"
-  on public.notifications for update
-  using (true);
-
--- ------------------------------------------------------------------------------
--- 9. SECURE STORAGE BUCKET FOR MEDIA UPLOADS
--- ------------------------------------------------------------------------------
-insert into storage.buckets (id, name, public)
-values ('media', 'media', true)
-on conflict (id) do nothing;
-
-drop policy if exists "Media files are publicly viewable" on storage.objects;
-drop policy if exists "Anyone can upload media" on storage.objects;
-drop policy if exists "Authenticated users can upload media" on storage.objects;
-drop policy if exists "Users can delete own media" on storage.objects;
-drop policy if exists "Allow media update" on storage.objects;
-drop policy if exists "Allow media delete" on storage.objects;
-
--- Public can view attached evidence photos
-create policy "Media files are publicly viewable"
-  on storage.objects for select
-  using (bucket_id = 'media');
-
--- Allow uploading media attachments for civic reports & challenges (Clerk authenticated or guest)
-create policy "Anyone can upload media"
-  on storage.objects for insert
-  with check (bucket_id = 'media');
-
--- Allow updating and deleting media
-create policy "Allow media update"
-  on storage.objects for update
-  using (bucket_id = 'media');
-
-create policy "Allow media delete"
-  on storage.objects for delete
-  using (bucket_id = 'media');
-
--- ------------------------------------------------------------------------------
--- 10. INITIAL SEED DATA
--- ------------------------------------------------------------------------------
-insert into public.challenges (
-  id, title, domain, domain_icon, domain_color, district, location, description,
-  stage, urgency, impact_level, submitter_type, submitted_by, beneficiaries,
-  upvotes, comments, photo_count, progress_percent, image_url, ai_tags, milestones
-)
-values
+INSERT INTO public.challenges (
+  id, title, domain, description, stage, district, block, location_name,
+  coordinates, severity, submitter_name, submitter_type, solutions_count,
+  upvotes, tags, ai_confidence, estimated_beneficiaries, budget_estimate
+) VALUES
 (
-  'CH-JH-2026-001',
-  'Solar-powered micro cold storage for tomato harvest gluts',
-  'Agriculture & Farming',
-  'Sprout',
-  '#16A34A',
-  'Ranchi',
-  'Ormanjhi block, 6 panchayats',
-  'Farmers experience 35-40% post-harvest spoilage during February-March peak tomato harvests due to zero local cold chain facilities. Need decentralized 5MT solar cold rooms.',
-  'Pilot Testing',
-  'High',
-  'High',
-  'Community Org',
-  'Sunita Devi (SHG Lead)',
-  1200,
-  42,
-  8,
-  3,
-  75,
-  'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?auto=format&fit=crop&w=1200&q=80',
-  '["Cold Chain", "Post-Harvest", "Solar Energy", "Tomato", "SHG", "Rural Economy"]'::jsonb,
-  '[
-    {"id": "m1", "title": "Field baseline survey & thermal load calc", "dueDate": "15 Jan 2026", "completed": true},
-    {"id": "m2", "title": "PCM thermal storage prototype design", "dueDate": "10 Feb 2026", "completed": true},
-    {"id": "m3", "title": "Ormanjhi prototype deployment & trial", "dueDate": "28 Feb 2026", "completed": true},
-    {"id": "m4", "title": "Commercial viability & SHG handoff", "dueDate": "30 Mar 2026", "completed": false}
-  ]'::jsonb
-),
-(
-  'CH-JH-2026-002',
-  'Arsenic and fluoride filtration for tribal residential schools',
-  'Water & Sanitation',
-  'Droplets',
-  '#0284C7',
-  'Sahebganj',
-  'Rajmahal & Borio blocks',
-  'Groundwater in 14 tribal welfare residential schools shows fluoride levels exceeding 2.8 mg/L and arsenic contamination. Students suffering from dental fluorosis and gastric illnesses.',
+  'SC-JH-84920',
+  'Solar-powered micro cold storage for tomato harvest',
+  'Agriculture & Post-Harvest',
+  'Farmers in Ormanjhi face 35% spoilage of tomato crops due to lack of village-level pre-cooling facilities during peak summer harvest.',
   'In Progress',
-  'Critical',
-  'Critical',
-  'PRI',
-  'Birsa Munda Smriti Samiti',
-  3400,
-  89,
-  14,
-  5,
-  55,
-  'https://images.unsplash.com/photo-1548839140-29a749e1cf4d?auto=format&fit=crop&w=1200&q=80',
-  '["Fluoride", "Arsenic", "Water Quality", "School Health", "Nano Filtration", "Tribal Welfare"]'::jsonb,
-  '[
-    {"id": "m1", "title": "Water quality mapping across 14 schools", "dueDate": "05 Jan 2026", "completed": true},
-    {"id": "m2", "title": "Adsorbent nano-composite filter selection", "dueDate": "25 Jan 2026", "completed": true},
-    {"id": "m3", "title": "Installation in 3 pilot schools (Rajmahal)", "dueDate": "20 Feb 2026", "completed": false},
-    {"id": "m4", "title": "IoT water quality sensor integration", "dueDate": "15 Mar 2026", "completed": false}
-  ]'::jsonb
+  'Ranchi',
+  'Ormanjhi',
+  'Ormanjhi Village Hub',
+  '{"latitude": 23.4834, "longitude": 85.4789}'::jsonb,
+  'High',
+  'Manoj Mahto (Kisan Samiti)',
+  'Citizen',
+  3,
+  42,
+  '["Solar", "Cold Chain", "Post Harvest", "Tomato"]'::jsonb,
+  94,
+  '1,200 smallholder farmers',
+  '₹4,20,000'
 ),
 (
-  'CH-JH-2026-003',
-  'All-weather culvert design for flood-isolated forest villages',
-  'Roads & Transport',
-  'Truck',
-  '#D97706',
-  'West Singhbhum',
-  'Goilkera & Manoharpur blocks',
-  'Monsoon flash floods wash away makeshift earthen hume-pipe culverts every year, cutting off 8 tribal villages (population ~4,800) from PHCs and ration distribution for 4 months.',
+  'SC-JH-84921',
+  'Fluoride water filtration unit for school hand pumps',
+  'Water, Sanitation & Health',
+  'Excess fluoride levels in groundwater causing dental fluorosis among primary school students in 6 schools across Daltonganj block.',
+  'Pilot Testing',
+  'Palamu',
+  'Daltonganj',
+  'Chianki Primary School Cluster',
+  '{"latitude": 24.0416, "longitude": 84.0722}'::jsonb,
+  'Critical',
+  'Sita Devi (Panchayat Samiti)',
+  'Panchayat',
+  2,
+  87,
+  '["Fluoride", "Filtration", "Drinking Water", "Health"]'::jsonb,
+  98,
+  '3,400 students & teachers',
+  '₹2,80,000'
+),
+(
+  'SC-JH-84922',
+  'Mahua flower drying and value-added processing kiln',
+  'Forest Produce & Livelihood',
+  'Traditional open-ground drying of Mahua flowers causes dust contamination and reduces market value for tribal forest gatherers by 40%.',
   'Assigned',
-  'High',
-  'High',
+  'Khunti',
+  'Murhu',
+  'Murhu Haat Bazaar',
+  '{"latitude": 23.0712, "longitude": 85.2789}'::jsonb,
+  'Medium',
+  'Birsa Munda SHG Federation',
   'Citizen',
-  'Mangal Purty (Ward Member)',
-  4800,
-  64,
-  5,
-  4,
+  1,
   35,
-  'https://images.unsplash.com/photo-1515165562839-978bbcf18277?auto=format&fit=crop&w=1200&q=80',
-  '["Culvert", "Flash Floods", "Prefab Concrete", "Rural Access", "Monsoon", "Saranda"]'::jsonb,
-  '[
-    {"id": "m1", "title": "Hydraulic catchment and soil stability study", "dueDate": "20 Jan 2026", "completed": true},
-    {"id": "m2", "title": "Modular precast arch culvert design", "dueDate": "15 Feb 2026", "completed": false},
-    {"id": "m3", "title": "Local stone-mason training for construction", "dueDate": "10 Mar 2026", "completed": false}
-  ]'::jsonb
+  '["Mahua", "NTFP", "Tribal Livelihood", "Solar Dryer"]'::jsonb,
+  91,
+  '850 tribal collectors',
+  '₹1,95,000'
+),
+(
+  'SC-JH-84923',
+  'IoT soil moisture sensor network for deficit irrigation',
+  'Agri-Tech & Water Management',
+  'Plateau upland paddy fields require precision water scheduling during monsoon breaks to prevent crop failure.',
+  'Validated',
+  'Hazaribagh',
+  'Barhi',
+  'Barhi Research Extension Area',
+  '{"latitude": 24.3012, "longitude": 85.4298}'::jsonb,
+  'High',
+  'Barhi Krishi Vikas Manch',
+  'Citizen',
+  4,
+  56,
+  '["IoT", "Soil Moisture", "Upland Paddy", "Water Conservation"]'::jsonb,
+  89,
+  '620 paddy farmers',
+  '₹3,10,000'
+),
+(
+  'SC-JH-84924',
+  'Tasar silk yarn reeling machine for rural women artisans',
+  'Textiles, Handicrafts & MSME',
+  'Thigh reeling of wild Tasar cocoons causes chronic musculoskeletal strain for tribal women reelers in Chaibasa clusters.',
+  'In Progress',
+  'West Singhbhum',
+  'Chaibasa',
+  'Chaibasa Silk Cluster Hub',
+  '{"latitude": 22.5524, "longitude": 85.8081}'::jsonb,
+  'Critical',
+  'Jharkhand Silk Producer Union',
+  'Panchayat',
+  3,
+  98,
+  '["Tasar Silk", "Ergonomics", "Women SHGs", "MSME"]'::jsonb,
+  96,
+  '1,800 women reelers',
+  '₹5,50,000'
+),
+(
+  'SC-JH-84925',
+  'Decentralized biomass pelletizer for crop residue management',
+  'Clean Energy & Waste-to-Wealth',
+  'Open field burning of rice straw in Kanke causing seasonal air quality degradation and organic carbon loss.',
+  'Submitted',
+  'Ranchi',
+  'Kanke',
+  'Kanke Agri Block',
+  '{"latitude": 23.4312, "longitude": 85.3211}'::jsonb,
+  'Medium',
+  'Green Ranchi Citizen Group',
+  'Citizen',
+  0,
+  19,
+  '["Biomass", "Pelletizer", "Clean Energy", "Crop Residue"]'::jsonb,
+  87,
+  'Entire Kanke peri-urban zone',
+  '₹3,75,000'
 )
-on conflict (id) do nothing;
+ON CONFLICT (id) DO NOTHING;

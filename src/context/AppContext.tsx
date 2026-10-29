@@ -280,8 +280,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           .eq('id', uuid)
           .maybeSingle();
 
-        const metaRole = (clerkUser?.unsafeMetadata?.role as UserRole) || 'citizen';
-        const role: UserRole = (profileData?.role || metaRole) as UserRole;
+        const metaRole = clerkUser?.unsafeMetadata?.role as UserRole | undefined;
+        const dbRole = profileData?.role as UserRole | undefined;
+        const role: UserRole = metaRole || dbRole || 'citizen';
         const userFullName = profileData?.full_name || name || (email ? email.split('@')[0] : 'Citizen');
         const phone = profileData?.phone || '';
         const district =
@@ -311,18 +312,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setUser(updatedProfile);
         saveLocalUserProfile(updatedProfile, role);
 
-        if (!profileData) {
-          await saveAuthProfile({
-            id: clerkId,
-            email,
-            full_name: userFullName,
-            phone,
-            role,
-            district,
-            block,
-            community_role: communityRole,
-          });
-        }
+        await saveAuthProfile({
+          id: clerkId,
+          email,
+          full_name: userFullName,
+          phone,
+          role,
+          district,
+          block,
+          community_role: communityRole,
+        });
       } catch (e) {
         console.warn('Error syncing profile from Supabase:', e);
       }
@@ -465,21 +464,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return ROLE_PROFILES[role] || prev;
     });
 
-    const targetQuery = supabase.from('profiles').update({
-      role,
-      updated_at: new Date().toISOString(),
-    });
-
-    if (session?.user?.id) {
-      targetQuery.eq('id', session.user.id).then();
+    const targetUserId = session?.user?.id || (clerkUser ? clerkIdToUUID(clerkUser.id) : null);
+    if (targetUserId) {
+      supabase.from('profiles').upsert({
+        id: targetUserId,
+        role,
+        email: user.email || clerkUser?.primaryEmailAddress?.emailAddress || null,
+        full_name: user.name || clerkUser?.fullName || 'User',
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'id' }).then();
     } else if (user.email) {
-      targetQuery.eq('email', user.email).then();
-    } else if (user.phone) {
-      targetQuery.eq('phone', user.phone).then();
+      supabase.from('profiles').update({
+        role,
+        updated_at: new Date().toISOString(),
+      }).eq('email', user.email).then();
     }
 
     if (clerkUser) {
-      clerkUser.update({ unsafeMetadata: { role } }).catch(() => {});
+      clerkUser.update({
+        unsafeMetadata: {
+          ...(clerkUser.unsafeMetadata || {}),
+          role,
+        },
+      }).catch((err) => console.warn('Failed to update Clerk role metadata:', err));
     }
   };
 
@@ -1486,20 +1493,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
 
     try {
-      if (clerkUser && profile.name) {
-        const parts = profile.name.trim().split(' ');
+      if (clerkUser) {
+        const parts = profile.name ? profile.name.trim().split(' ') : [];
         clerkUser
           .update({
-            firstName: parts[0],
-            lastName: parts.slice(1).join(' ') || undefined,
+            ...(parts.length > 0
+              ? { firstName: parts[0], lastName: parts.slice(1).join(' ') || undefined }
+              : {}),
             unsafeMetadata: {
-              district: profile.district,
-              block: profile.block,
-              communityRole: profile.communityRole,
+              ...(clerkUser.unsafeMetadata || {}),
+              district: profile.district ?? clerkUser.unsafeMetadata?.district,
+              block: profile.block ?? clerkUser.unsafeMetadata?.block,
+              communityRole: profile.communityRole ?? clerkUser.unsafeMetadata?.communityRole,
               role: userRole,
             },
           })
-          .catch(() => {});
+          .catch((err) => console.warn('Failed to update Clerk user profile metadata:', err));
       }
 
       const updatePayload: Record<string, any> = {
@@ -1512,8 +1521,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (profile.communityRole !== undefined) updatePayload.community_role = profile.communityRole;
       if (userRole !== undefined) updatePayload.role = userRole;
 
-      if (session?.user?.id) {
-        await supabase.from('profiles').update(updatePayload).eq('id', session.user.id);
+      const targetUserId = session?.user?.id || (clerkUser ? clerkIdToUUID(clerkUser.id) : null);
+      if (targetUserId) {
+        await supabase.from('profiles').upsert({
+          id: targetUserId,
+          ...updatePayload,
+        }, { onConflict: 'id' });
       } else if (user.email) {
         await supabase.from('profiles').update(updatePayload).eq('email', user.email);
       } else if (user.phone) {

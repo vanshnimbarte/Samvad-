@@ -172,7 +172,7 @@ function AdminRow({
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: SamadhanColors.background },
-  content: { padding: Spacing.lg, paddingBottom: 110 },
+  content: { padding: Spacing.lg, paddingBottom: 110, maxWidth: 960, width: '100%', alignSelf: 'center' },
   h1: { fontSize: 20, fontWeight: '800', color: SamadhanColors.textPrimary },
   sub: { marginTop: 4, marginBottom: Spacing.lg, color: SamadhanColors.textSecondary, fontSize: 13, lineHeight: 18 },
   h2: { marginTop: Spacing.lg, marginBottom: Spacing.sm, fontSize: 14, fontWeight: '800', color: SamadhanColors.textPrimary },

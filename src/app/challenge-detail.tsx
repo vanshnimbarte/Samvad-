@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: SamadhanColors.textPrimary,
   },
-  content: { paddingHorizontal: Spacing.lg, paddingBottom: 40 },
+  content: { paddingHorizontal: Spacing.lg, paddingBottom: 40, maxWidth: 960, width: '100%', alignSelf: 'center' },
   cover: { width: '100%', height: 180, borderRadius: Radius.lg, backgroundColor: '#E2E8F0', marginBottom: Spacing.md },
   stage: { alignSelf: 'flex-start', borderWidth: 1, borderRadius: Radius.full, paddingHorizontal: 10, paddingVertical: 4 },
   stageText: { fontSize: 11, fontWeight: '800' },

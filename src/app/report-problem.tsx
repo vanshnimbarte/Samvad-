@@ -996,6 +996,9 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: Spacing.lg,
+    maxWidth: 720,
+    width: '100%',
+    alignSelf: 'center',
   },
   stepContainer: {
     marginBottom: Spacing.xl,
@@ -1280,6 +1283,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: SamadhanColors.border,
     padding: Spacing.lg,
+    maxWidth: 720,
+    width: '100%',
+    alignSelf: 'center',
     marginBottom: Spacing.lg,
   },
   reviewSection: {

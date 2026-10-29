@@ -1,8 +1,9 @@
 import React from 'react';
-import { ScrollView, View, Text, StyleSheet } from 'react-native';
+import { ScrollView, View, Text, StyleSheet, Platform, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Header } from '@/components/common/Header';
 import { useApp } from '@/context/AppContext';
+import { InstitutionalWebPortal } from '@/components/web/InstitutionalWebPortal';
 import {
   HEADLINE_KPIS,
   DOMAIN_STATS,
@@ -14,7 +15,12 @@ import { SamadhanColors, Spacing, Radius } from '@/constants/samadhan-theme';
 
 export default function DashboardScreen() {
   const { language, fontScale } = useApp();
+  const { width } = useWindowDimensions();
   const maxTrend = Math.max(...MONTHLY_TREND.map((m) => m.submitted));
+
+  if (Platform.OS === 'web' || width >= 768) {
+    return <InstitutionalWebPortal />;
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
@@ -88,7 +94,7 @@ function Kpi({ label, value }: { label: string; value: string }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: SamadhanColors.background },
-  content: { padding: Spacing.lg },
+  content: { padding: Spacing.lg, maxWidth: 1040, width: '100%', alignSelf: 'center' },
   h1: { fontWeight: '800', color: SamadhanColors.textPrimary },
   sub: { fontSize: 13, color: SamadhanColors.textSecondary, marginTop: 4, marginBottom: Spacing.lg, lineHeight: 18 },
   kpiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: Spacing.xl },

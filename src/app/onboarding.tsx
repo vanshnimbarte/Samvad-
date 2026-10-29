@@ -61,12 +61,12 @@ export default function OnboardingScreen() {
     if (currentSlide < slides.length - 1) {
       setCurrentSlide(currentSlide + 1);
     } else {
-      router.push('/auth');
+      router.replace('/auth');
     }
   };
 
   const handleSkip = () => {
-    router.push('/auth');
+    router.replace('/auth');
   };
 
   const activeSlideData = slides[currentSlide];
