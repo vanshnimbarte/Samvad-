@@ -1,58 +1,72 @@
 -- ============================================================
--- SAMVAD JHARKHAND - COMPLETE SUPABASE DATABASE SCHEMA
+-- SAMVAD JHARKHAND - SELF-HEALING SUPABASE DATABASE SCHEMA
 -- ============================================================
--- Run this script in your Supabase Dashboard:
+-- This script safely updates existing tables (adds missing columns)
+-- and seeds the database without any "column does not exist" errors.
+-- Run this in your Supabase SQL Editor:
 -- https://supabase.com/dashboard/project/iajpmeoqtuqrwwesuvgq/sql
 -- ============================================================
 
--- 1. Profiles Table (Citizens, University, Industry, Government)
+-- 1. Profiles Table
 CREATE TABLE IF NOT EXISTS public.profiles (
   id TEXT PRIMARY KEY,
-  full_name TEXT,
-  email TEXT,
-  phone TEXT,
-  role TEXT DEFAULT 'citizen',
-  district TEXT DEFAULT 'Ranchi',
-  block TEXT DEFAULT 'Ranchi Sadar',
-  community_role TEXT DEFAULT 'Citizen Member',
-  avatar_url TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS full_name TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS email TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS phone TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'citizen';
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS district TEXT DEFAULT 'Ranchi';
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS block TEXT DEFAULT 'Ranchi Sadar';
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS community_role TEXT DEFAULT 'Citizen Member';
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
 
 -- 2. Challenges Table (Core societal challenges)
 CREATE TABLE IF NOT EXISTS public.challenges (
   id TEXT PRIMARY KEY,
-  title TEXT NOT NULL,
-  domain TEXT NOT NULL,
-  description TEXT,
-  stage TEXT DEFAULT 'Submitted',
-  district TEXT NOT NULL,
-  block TEXT,
-  location_name TEXT,
-  coordinates JSONB,
-  severity TEXT DEFAULT 'Medium',
-  submitter_name TEXT,
-  submitter_type TEXT DEFAULT 'Citizen',
-  submitter_id TEXT,
-  assigned_university JSONB,
-  industry_partner JSONB,
-  solutions_count INT DEFAULT 0,
-  upvotes INT DEFAULT 1,
-  media_urls JSONB DEFAULT '[]'::jsonb,
-  tags JSONB DEFAULT '[]'::jsonb,
-  ai_confidence INT DEFAULT 90,
-  estimated_beneficiaries TEXT,
-  budget_estimate TEXT,
-  similar_challenge_ids JSONB DEFAULT '[]'::jsonb,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE public.challenges ADD COLUMN IF NOT EXISTS title TEXT;
+ALTER TABLE public.challenges ADD COLUMN IF NOT EXISTS domain TEXT;
+ALTER TABLE public.challenges ADD COLUMN IF NOT EXISTS domain_icon TEXT DEFAULT 'Sparkles';
+ALTER TABLE public.challenges ADD COLUMN IF NOT EXISTS domain_color TEXT DEFAULT '#16A34A';
+ALTER TABLE public.challenges ADD COLUMN IF NOT EXISTS district TEXT DEFAULT 'Ranchi';
+ALTER TABLE public.challenges ADD COLUMN IF NOT EXISTS block TEXT DEFAULT 'Ranchi Sadar';
+ALTER TABLE public.challenges ADD COLUMN IF NOT EXISTS location TEXT DEFAULT 'Jharkhand';
+ALTER TABLE public.challenges ADD COLUMN IF NOT EXISTS location_name TEXT;
+ALTER TABLE public.challenges ADD COLUMN IF NOT EXISTS description TEXT;
+ALTER TABLE public.challenges ADD COLUMN IF NOT EXISTS stage TEXT DEFAULT 'Submitted';
+ALTER TABLE public.challenges ADD COLUMN IF NOT EXISTS urgency TEXT DEFAULT 'Medium';
+ALTER TABLE public.challenges ADD COLUMN IF NOT EXISTS impact_level TEXT DEFAULT 'Medium';
+ALTER TABLE public.challenges ADD COLUMN IF NOT EXISTS submitter_type TEXT DEFAULT 'Citizen';
+ALTER TABLE public.challenges ADD COLUMN IF NOT EXISTS submitted_by TEXT;
+ALTER TABLE public.challenges ADD COLUMN IF NOT EXISTS submitted_at TEXT;
+ALTER TABLE public.challenges ADD COLUMN IF NOT EXISTS beneficiaries INT DEFAULT 100;
+ALTER TABLE public.challenges ADD COLUMN IF NOT EXISTS upvotes INT DEFAULT 1;
+ALTER TABLE public.challenges ADD COLUMN IF NOT EXISTS comments INT DEFAULT 0;
+ALTER TABLE public.challenges ADD COLUMN IF NOT EXISTS photo_count INT DEFAULT 0;
+ALTER TABLE public.challenges ADD COLUMN IF NOT EXISTS ai_tags JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE public.challenges ADD COLUMN IF NOT EXISTS milestones JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE public.challenges ADD COLUMN IF NOT EXISTS assigned_university JSONB;
+ALTER TABLE public.challenges ADD COLUMN IF NOT EXISTS industry_partner JSONB;
+ALTER TABLE public.challenges ADD COLUMN IF NOT EXISTS progress_percent INT DEFAULT 0;
+ALTER TABLE public.challenges ADD COLUMN IF NOT EXISTS image_url TEXT;
+ALTER TABLE public.challenges ADD COLUMN IF NOT EXISTS required_skills JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE public.challenges ADD COLUMN IF NOT EXISTS funding_available TEXT;
+ALTER TABLE public.challenges ADD COLUMN IF NOT EXISTS applications INT DEFAULT 0;
+ALTER TABLE public.challenges ADD COLUMN IF NOT EXISTS deadline TEXT;
+ALTER TABLE public.challenges ADD COLUMN IF NOT EXISTS department TEXT;
+ALTER TABLE public.challenges ADD COLUMN IF NOT EXISTS ai_confidence INT DEFAULT 85;
+ALTER TABLE public.challenges ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE public.challenges ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
 
 -- 3. Challenge Comments / Community Discussion
 CREATE TABLE IF NOT EXISTS public.challenge_comments (
   id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-  challenge_id TEXT REFERENCES public.challenges(id) ON DELETE CASCADE,
+  challenge_id TEXT,
   user_id TEXT,
   author_name TEXT NOT NULL,
   author_role TEXT,
@@ -63,10 +77,9 @@ CREATE TABLE IF NOT EXISTS public.challenge_comments (
 -- 4. Challenge Supports / Upvotes
 CREATE TABLE IF NOT EXISTS public.challenge_supports (
   id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-  challenge_id TEXT REFERENCES public.challenges(id) ON DELETE CASCADE,
+  challenge_id TEXT,
   user_id TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(challenge_id, user_id)
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- 5. Civic Reports Table (6-Step Detailed Reports)
@@ -95,7 +108,7 @@ CREATE TABLE IF NOT EXISTS public.civic_reports (
 
 -- ============================================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
--- Ensures mobile app & web client with anon key can read & write
+-- Enables open public access for Clerk-authenticated app client
 -- ============================================================
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
@@ -104,7 +117,6 @@ ALTER TABLE public.challenge_comments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.challenge_supports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.civic_reports ENABLE ROW LEVEL SECURITY;
 
--- Allow public read/write for all tables using the client anon key
 DROP POLICY IF EXISTS "Public access profiles" ON public.profiles;
 CREATE POLICY "Public access profiles" ON public.profiles FOR ALL USING (true) WITH CHECK (true);
 
@@ -121,7 +133,7 @@ DROP POLICY IF EXISTS "Public access reports" ON public.civic_reports;
 CREATE POLICY "Public access reports" ON public.civic_reports FOR ALL USING (true) WITH CHECK (true);
 
 -- ============================================================
--- STORAGE BUCKETS FOR CHALLENGE PHOTOS & MEDIA
+-- STORAGE BUCKETS FOR MEDIA & PHOTOS
 -- ============================================================
 
 INSERT INTO storage.buckets (id, name, public)
@@ -137,132 +149,158 @@ CREATE POLICY "Public media insert" ON storage.objects
 FOR INSERT WITH CHECK (bucket_id IN ('media', 'challenge-media'));
 
 -- ============================================================
--- SEED INITIAL CHALLENGES
+-- SEED INITIAL CHALLENGES (Matches App Schema Exactly)
 -- ============================================================
 
 INSERT INTO public.challenges (
-  id, title, domain, description, stage, district, block, location_name,
-  coordinates, severity, submitter_name, submitter_type, solutions_count,
-  upvotes, tags, ai_confidence, estimated_beneficiaries, budget_estimate
+  id, title, domain, domain_icon, domain_color, description, stage,
+  district, block, location, urgency, impact_level, submitter_type,
+  submitted_by, beneficiaries, upvotes, photo_count, ai_tags,
+  ai_confidence, funding_available
 ) VALUES
 (
   'SC-JH-84920',
   'Solar-powered micro cold storage for tomato harvest',
-  'Agriculture & Post-Harvest',
+  'Agriculture & Farming',
+  'Sprout',
+  '#16A34A',
   'Farmers in Ormanjhi face 35% spoilage of tomato crops due to lack of village-level pre-cooling facilities during peak summer harvest.',
   'In Progress',
   'Ranchi',
   'Ormanjhi',
-  'Ormanjhi Village Hub',
-  '{"latitude": 23.4834, "longitude": 85.4789}'::jsonb,
+  'Ormanjhi, Ranchi',
   'High',
-  'Manoj Mahto (Kisan Samiti)',
+  'High',
   'Citizen',
-  3,
+  'Manoj Mahto (Kisan Samiti)',
+  1200,
   42,
+  2,
   '["Solar", "Cold Chain", "Post Harvest", "Tomato"]'::jsonb,
   94,
-  '1,200 smallholder farmers',
   '₹4,20,000'
 ),
 (
   'SC-JH-84921',
   'Fluoride water filtration unit for school hand pumps',
-  'Water, Sanitation & Health',
+  'Water & Sanitation',
+  'Droplets',
+  '#0284C7',
   'Excess fluoride levels in groundwater causing dental fluorosis among primary school students in 6 schools across Daltonganj block.',
   'Pilot Testing',
   'Palamu',
   'Daltonganj',
-  'Chianki Primary School Cluster',
-  '{"latitude": 24.0416, "longitude": 84.0722}'::jsonb,
+  'Daltonganj, Palamu',
   'Critical',
+  'Critical',
+  'PRI',
   'Sita Devi (Panchayat Samiti)',
-  'Panchayat',
-  2,
+  3400,
   87,
+  3,
   '["Fluoride", "Filtration", "Drinking Water", "Health"]'::jsonb,
   98,
-  '3,400 students & teachers',
   '₹2,80,000'
 ),
 (
   'SC-JH-84922',
   'Mahua flower drying and value-added processing kiln',
-  'Forest Produce & Livelihood',
+  'Rural Livelihoods',
+  'Trees',
+  '#059669',
   'Traditional open-ground drying of Mahua flowers causes dust contamination and reduces market value for tribal forest gatherers by 40%.',
   'Assigned',
   'Khunti',
   'Murhu',
-  'Murhu Haat Bazaar',
-  '{"latitude": 23.0712, "longitude": 85.2789}'::jsonb,
+  'Murhu, Khunti',
   'Medium',
-  'Birsa Munda SHG Federation',
+  'Medium',
   'Citizen',
-  1,
+  'Birsa Munda SHG Federation',
+  850,
   35,
+  1,
   '["Mahua", "NTFP", "Tribal Livelihood", "Solar Dryer"]'::jsonb,
   91,
-  '850 tribal collectors',
   '₹1,95,000'
 ),
 (
   'SC-JH-84923',
   'IoT soil moisture sensor network for deficit irrigation',
-  'Agri-Tech & Water Management',
+  'Agriculture & Farming',
+  'Sprout',
+  '#16A34A',
   'Plateau upland paddy fields require precision water scheduling during monsoon breaks to prevent crop failure.',
   'Validated',
   'Hazaribagh',
   'Barhi',
-  'Barhi Research Extension Area',
-  '{"latitude": 24.3012, "longitude": 85.4298}'::jsonb,
+  'Barhi, Hazaribagh',
   'High',
-  'Barhi Krishi Vikas Manch',
+  'High',
   'Citizen',
-  4,
+  'Barhi Krishi Vikas Manch',
+  620,
   56,
+  2,
   '["IoT", "Soil Moisture", "Upland Paddy", "Water Conservation"]'::jsonb,
   89,
-  '620 paddy farmers',
   '₹3,10,000'
 ),
 (
   'SC-JH-84924',
   'Tasar silk yarn reeling machine for rural women artisans',
-  'Textiles, Handicrafts & MSME',
+  'Rural Livelihoods',
+  'Factory',
+  '#D97706',
   'Thigh reeling of wild Tasar cocoons causes chronic musculoskeletal strain for tribal women reelers in Chaibasa clusters.',
   'In Progress',
   'West Singhbhum',
   'Chaibasa',
-  'Chaibasa Silk Cluster Hub',
-  '{"latitude": 22.5524, "longitude": 85.8081}'::jsonb,
+  'Chaibasa, West Singhbhum',
   'Critical',
+  'Critical',
+  'PRI',
   'Jharkhand Silk Producer Union',
-  'Panchayat',
-  3,
+  1800,
   98,
+  4,
   '["Tasar Silk", "Ergonomics", "Women SHGs", "MSME"]'::jsonb,
   96,
-  '1,800 women reelers',
   '₹5,50,000'
 ),
 (
   'SC-JH-84925',
   'Decentralized biomass pelletizer for crop residue management',
-  'Clean Energy & Waste-to-Wealth',
+  'Electricity & Energy',
+  'Zap',
+  '#EA580C',
   'Open field burning of rice straw in Kanke causing seasonal air quality degradation and organic carbon loss.',
   'Submitted',
   'Ranchi',
   'Kanke',
-  'Kanke Agri Block',
-  '{"latitude": 23.4312, "longitude": 85.3211}'::jsonb,
+  'Kanke, Ranchi',
   'Medium',
-  'Green Ranchi Citizen Group',
+  'Medium',
   'Citizen',
-  0,
+  'Green Ranchi Citizen Group',
+  500,
   19,
+  1,
   '["Biomass", "Pelletizer", "Clean Energy", "Crop Residue"]'::jsonb,
   87,
-  'Entire Kanke peri-urban zone',
   '₹3,75,000'
 )
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE SET
+  title = EXCLUDED.title,
+  domain = EXCLUDED.domain,
+  description = EXCLUDED.description,
+  stage = EXCLUDED.stage,
+  district = EXCLUDED.district,
+  block = EXCLUDED.block,
+  location = EXCLUDED.location,
+  urgency = EXCLUDED.urgency,
+  impact_level = EXCLUDED.impact_level,
+  submitter_type = EXCLUDED.submitter_type,
+  submitted_by = EXCLUDED.submitted_by,
+  beneficiaries = EXCLUDED.beneficiaries,
+  funding_available = EXCLUDED.funding_available;
